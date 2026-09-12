@@ -1,110 +1,142 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
-const links = [
+const navLinks = [
   { href: "/", label: "Beranda" },
-  { href: "/tentang", label: "Tentang Kami" },
-  { href: "/struktur", label: "Struktur" },
+  { href: "/tentang", label: "Tentang" },
   { href: "/visi-misi", label: "Visi & Misi" },
-  { href: "/proker", label: "Proker" },
+  { href: "/struktur", label: "Struktur" },
+  { href: "/proker", label: "Program Kerja" },
   { href: "/berita", label: "Berita" },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <nav className="sticky top-0 z-50 bg-[#EEE6D9] border-b border-[#343B66]/15 shadow-xs">
-      <div className="max-w-[1440px] mx-auto px-5 md:px-10 flex items-center justify-between h-16 md:h-20">
-        <Link href="/" className="flex items-center gap-2 md:gap-4 group">
-          <div className="flex items-center gap-1 md:gap-2">
-            <div className="w-8 h-8 md:w-11 md:h-11 bg-[#343B66] rounded-lg flex items-center justify-center text-[9px] md:text-xs font-bold text-[#EAE0CF] shadow-xs">
-              BSI
-            </div>
-            <div className="w-8 h-8 md:w-11 md:h-11 bg-[#343B66] rounded-lg flex items-center justify-center text-[9px] md:text-xs font-bold text-[#EAE0CF] shadow-xs">
-              HMTI
-            </div>
+    <header className="sticky top-0 left-0 w-full z-50 bg-[#fcf9f1]/95 backdrop-blur-md border-b border-[#e2ddd3] transition-all">
+      <div className="h-20 max-w-[1280px] mx-auto px-5 lg:px-12 flex items-center justify-between gap-6">
+        {/* Brand / Logo */}
+        <Link href="/" className="flex items-center gap-3.5 group">
+          <div className="relative h-10 w-10 shrink-0">
+            <Image
+              src="/hmti.png"
+              alt="Logo HMTI Margonda"
+              width={40}
+              height={40}
+              className="object-contain w-full h-full group-hover:scale-105 transition-transform"
+              priority
+            />
           </div>
-          <div>
-            <p className="text-[#131313] font-inter text-sm md:text-xl font-bold leading-[18px] md:leading-[26px] group-hover:text-[#343B66] transition-colors">
+          <div className="flex flex-col">
+            <span className="font-serif text-xl lg:text-2xl text-[#0e1b2a] font-semibold tracking-tight leading-tight group-hover:text-[#3c608b] transition-colors">
               HMTI Margonda
-            </p>
-            <p className="text-[#343B66]/80 font-inter text-[10px] md:text-xs font-medium leading-[12px] md:leading-[14px]">
-              Universitas Bina Sarana Informatika
-            </p>
+            </span>
+            <span className="text-[11px] text-[#526071] tracking-wide font-medium">
+              UBSI Kampus Margonda
+            </span>
           </div>
         </Link>
-        {/* hamburger */}
-        <button
-          className="md:hidden p-2 rounded-lg hover:bg-[#343B66]/10 transition-colors"
-          onClick={() => setOpen(!open)}
-          aria-label="Menu Navigasi"
-        >
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#131313"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            {open ? (
-              <path d="M6 18L18 6M6 6l12 12" />
-            ) : (
-              <path d="M4 6h16M4 12h16M4 18h16" />
-            )}
-          </svg>
-        </button>
-        {/* desktop nav */}
-        <ul className="hidden md:flex items-center gap-2">
-          {links.map((l) => {
-            const isActive = pathname === l.href;
-            return (
-              <li key={l.href}>
-                <Link
-                  href={l.href}
-                  className={`font-inter text-base font-semibold leading-6 px-4 py-2 rounded-xl transition-all duration-200 block ${
-                    isActive
-                      ? "bg-[#343B66] text-[#EAE0CF] shadow-xs"
-                      : "text-[#131313] hover:text-[#343B66] hover:bg-[#343B66]/10"
-                  }`}
-                >
-                  {l.label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-      {/* mobile menu */}
-      {open && (
-        <div className="md:hidden bg-[#EEE6D9] px-5 pb-5 pt-2 border-t border-[#343B66]/10 space-y-1">
-          {links.map((l) => {
-            const isActive = pathname === l.href;
+
+        {/* Desktop Navigation Links */}
+        <nav className="hidden lg:flex items-center gap-1.5 xl:gap-2" aria-label="Menu Utama">
+          {navLinks.map((link) => {
+            const isActive = pathname === link.href;
             return (
               <Link
-                key={l.href}
-                href={l.href}
-                className={`block py-2.5 px-4 rounded-xl font-inter text-base font-semibold transition-all ${
+                key={link.href}
+                href={link.href}
+                className={`min-h-[44px] inline-flex items-center px-3.5 py-1 text-sm transition-all duration-200 rounded-lg ${
                   isActive
-                    ? "bg-[#343B66] text-[#EAE0CF]"
-                    : "text-[#131313] hover:bg-[#343B66]/10"
+                    ? "text-[#0e1b2a] font-semibold border-b-2 border-[#0e1b2a] bg-[#0e1b2a]/5"
+                    : "text-[#526071] font-medium hover:text-[#0e1b2a] hover:bg-[#0e1b2a]/5"
                 }`}
-                onClick={() => setOpen(false)}
               >
-                {l.label}
+                {link.label}
               </Link>
             );
           })}
+        </nav>
+
+        {/* Right CTA & Mobile Hamburger */}
+        <div className="flex items-center gap-3">
+          <Link
+            href="/tentang#kontak"
+            className="hidden sm:inline-flex items-center justify-center min-h-[44px] px-5 rounded-xl border border-[#0e1b2a] text-[#0e1b2a] text-sm font-medium hover:bg-[#0e1b2a] hover:text-[#ffffff] transition-all duration-200 shadow-xs active:scale-[0.98]"
+          >
+            Hubungi Kami
+          </Link>
+
+          <button
+            type="button"
+            aria-label={mobileMenuOpen ? "Tutup menu" : "Buka menu"}
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="lg:hidden min-h-[44px] min-w-[44px] p-2 text-[#0e1b2a] hover:bg-[#ebe8e0] rounded-xl transition-colors flex items-center justify-center"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              {mobileMenuOpen ? (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              ) : (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M4 7h16M4 12h16M4 17h16"
+                />
+              )}
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Menu Dropdown */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden bg-[#fcf9f1] border-b border-[#e2ddd3] px-5 py-4 space-y-1 animate-fadeIn shadow-md">
+          {navLinks.map((link) => {
+            const isActive = pathname === link.href;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`block px-4 py-3 rounded-lg text-sm transition-colors ${
+                  isActive
+                    ? "bg-[#0e1b2a] text-white font-semibold"
+                    : "text-[#0e1b2a] font-medium hover:bg-[#f1eee6]"
+                }`}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+          <div className="pt-3 border-t border-[#e2ddd3]">
+            <Link
+              href="/tentang#kontak"
+              onClick={() => setMobileMenuOpen(false)}
+              className="w-full inline-flex items-center justify-center min-h-[44px] px-5 rounded-xl bg-[#0e1b2a] text-white text-sm font-medium hover:bg-[#3c608b] transition-all shadow-xs"
+            >
+              Hubungi Kami
+            </Link>
+          </div>
         </div>
       )}
-    </nav>
+    </header>
   );
 }
+
 
