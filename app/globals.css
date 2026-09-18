@@ -4476,6 +4476,35 @@
     margin-top: 3.5rem;
     border-top: 1px solid var(--color-hairline);
   }
+
+  /* CTA directory di /visi-misi dipakai single-column — netralisasi gaya
+     homepage (split 2 kolom, padding asimetris, border samping) yang membuat
+     tampilan berantakan saat dipakai di halaman ini. */
+  .vm-next .home-directory-link {
+    min-height: 0;
+    padding: 2rem 0;
+    border-right: none;
+  }
+
+  .vm-next .home-directory-link:first-child {
+    padding-right: 0;
+    border-right: none;
+  }
+
+  .vm-next .home-directory-link:last-child {
+    padding-left: 0;
+    border-top: 1px solid var(--color-hairline);
+  }
+
+  .vm-next .home-directory-link h3 {
+    font-size: clamp(1.6rem, 2.4vw, 2.25rem);
+    line-height: 1.1;
+  }
+
+  .vm-next .home-directory-link p {
+    max-width: 46ch;
+    margin-top: 0.6rem;
+  }
 }
 
 /* ---------- PageHeader / EmptyState / Kontak polish ---------- */
@@ -6225,4 +6254,6 @@
     transition: none !important;
   }
 }
+
+
 
