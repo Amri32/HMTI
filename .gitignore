@@ -1,4 +1,4 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+﻿# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
 /node_modules
@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -39,3 +40,30 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local Appwrite setup credentials
+scripts/.appwrite-cred.json
+scripts/.appwrite-cred.*.json
+
+
+# log preview lokal & artefak python
+dev-preview.log
+__pycache__/
+*.pyc
+
+# zip sumber foto pengurus (isi sudah diekstrak ke public/pengurus/)
+public/PENGURUS HMTI.zip
+
+# artefak kerja lokal (screenshot audit, script cek CDP, brief)
+.impeccable/
+
+# tooling agent lokal (skill, state, worktree, lock file skills)
+.agents/
+.claude/
+.kilo/
+skills-lock.json
+anti-slop/
+
+# catatan kerja agent (opsional: hapus baris di bawah kalau mau di-commit)
+AGENTS.md
+CLAUDE.md

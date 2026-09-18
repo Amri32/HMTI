@@ -12,6 +12,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Artefak kerja lokal (script CDP, worktree agent, skill)
+    ".impeccable/**",
+    ".kilo/**",
+    ".agents/**",
+    ".claude/**",
+    "anti-slop/**",
   ]),
 ]);
 

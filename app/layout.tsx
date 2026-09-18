@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { Newsreader, Work_Sans } from "next/font/google";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import { Newsreader, Instrument_Sans } from "next/font/google";
+import SiteChrome from "@/components/SiteChrome";
 import "./globals.css";
 
 const newsreader = Newsreader({
@@ -10,16 +9,16 @@ const newsreader = Newsreader({
   style: ["normal", "italic"],
 });
 
-const workSans = Work_Sans({
-  variable: "--font-work-sans",
+const instrumentSans = Instrument_Sans({
+  variable: "--font-instrument-sans",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "HMTI Margonda | Himpunan Mahasiswa Teknologi Informasi UBSI",
+  title: "HMTI UBSI Margonda | Himpunan Mahasiswa Teknologi Informasi",
   description:
-    "Portal resmi Himpunan Mahasiswa Teknologi Informasi (HMTI) Universitas Bina Sarana Informatika Kampus Margonda, Depok. Ruang kolaborasi mahasiswa TI untuk belajar, berkarya, dan berdampak nyata.",
+    "Website Himpunan Mahasiswa Teknologi Informasi Universitas Bina Sarana Informatika Kampus Margonda.",
 };
 
 export default function RootLayout({
@@ -28,12 +27,18 @@ export default function RootLayout({
   return (
     <html
       lang="id"
-      className={`${newsreader.variable} ${workSans.variable} scroll-smooth`}
+      className={`${newsreader.variable} ${instrumentSans.variable} scroll-smooth`}
     >
-      <body className="min-h-screen flex flex-col font-sans bg-[#fcf9f1] text-[#0e1b2a] antialiased selection:bg-[#3c608b] selection:text-white">
-        <Navbar />
-        <main className="flex-1">{children}</main>
-        <Footer />
+      <body className="flex min-h-screen flex-col bg-canvas font-sans text-ink antialiased">
+        <a
+          href="#main-content"
+          className="sr-only z-[100] bg-ink px-4 py-3 text-white focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
+        >
+          Lewati ke konten utama
+        </a>
+        <SiteChrome>
+          {children}
+        </SiteChrome>
       </body>
     </html>
   );

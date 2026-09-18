@@ -1,142 +1,228 @@
 "use client";
 
-import Link from "next/link";
+import { Drawer } from "@base-ui/react/drawer";
+import { motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-
-const navLinks = [
-  { href: "/", label: "Beranda" },
-  { href: "/tentang", label: "Tentang" },
-  { href: "/visi-misi", label: "Visi & Misi" },
-  { href: "/struktur", label: "Struktur" },
-  { href: "/proker", label: "Program Kerja" },
-  { href: "/berita", label: "Berita" },
-];
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { navigationItems, siteProfile } from "@/app/site-content";
 
 export default function Navbar() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const reduceMotion = useReducedMotion();
+
+  const headerRef = useRef<HTMLElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const lastScrollY = useRef(0);
+  const rafId = useRef<number | null>(null);
+
+  function isActive(href: string) {
+    return href === "/" ? pathname === href : pathname.startsWith(href);
+  }
+
+  // Hide on scroll down, show on scroll up. Only after 200px to avoid hero flicker.
+  useEffect(() => {
+    if (reduceMotion) return;
+    const header = headerRef.current;
+    if (!header) return;
+
+    function onScroll() {
+      if (rafId.current != null) return;
+      rafId.current = requestAnimationFrame(() => {
+        rafId.current = null;
+        const y = window.scrollY;
+        const delta = y - lastScrollY.current;
+        lastScrollY.current = y;
+
+        if (!header) return;
+        header.dataset.scrolled = y > 8 ? "true" : "false";
+
+        if (y <= 200) {
+          header.dataset.hidden = "false";
+        } else if (delta > 4) {
+          header.dataset.hidden = "true";
+        } else if (delta < -4) {
+          header.dataset.hidden = "false";
+        }
+      });
+    }
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (rafId.current != null) cancelAnimationFrame(rafId.current);
+    };
+  }, [reduceMotion]);
+
+  // Sliding underline indicator for active nav link
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+
+    function updateIndicator() {
+      const active = nav!.querySelector<HTMLAnchorElement>('a[aria-current="page"]');
+      if (!active) {
+        nav!.style.setProperty("--nav-indicator-left", "0px");
+        nav!.style.setProperty("--nav-indicator-width", "0px");
+        return;
+      }
+      const navRect = nav!.getBoundingClientRect();
+      const rect = active.getBoundingClientRect();
+      nav!.style.setProperty("--nav-indicator-left", `${rect.left - navRect.left}px`);
+      nav!.style.setProperty("--nav-indicator-width", `${rect.width}px`);
+    }
+
+    updateIndicator();
+    const ro = new ResizeObserver(updateIndicator);
+    ro.observe(nav);
+    window.addEventListener("resize", updateIndicator);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", updateIndicator);
+    };
+  }, [pathname]);
 
   return (
-    <header className="sticky top-0 left-0 w-full z-50 bg-[#fcf9f1]/95 backdrop-blur-md border-b border-[#e2ddd3] transition-all">
-      <div className="h-20 max-w-[1280px] mx-auto px-5 lg:px-12 flex items-center justify-between gap-6">
-        {/* Brand / Logo */}
-        <Link href="/" className="flex items-center gap-3.5 group">
-          <div className="relative h-10 w-10 shrink-0">
-            <Image
-              src="/hmti.png"
-              alt="Logo HMTI Margonda"
-              width={40}
-              height={40}
-              className="object-contain w-full h-full group-hover:scale-105 transition-transform"
-              priority
-            />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-serif text-xl lg:text-2xl text-[#0e1b2a] font-semibold tracking-tight leading-tight group-hover:text-[#3c608b] transition-colors">
-              HMTI Margonda
+    <header ref={headerRef} className="site-header" data-scrolled="false" data-hidden="false">
+      <div key={pathname} className="mx-auto flex h-[72px] w-full max-w-[1440px] animate-[nav-route-enter_300ms_ease-out_both] items-center justify-between gap-4 px-5 sm:px-8 lg:px-6 xl:px-12">
+        <Link
+          href="/"
+          className="flex min-h-11 min-w-0 items-center gap-3"
+          aria-label={`${siteProfile.shortName}, kembali ke beranda`}
+        >
+          <Image
+            src="/hmti.png"
+            alt=""
+            width={40}
+            height={40}
+            className="h-10 w-10 shrink-0 object-contain"
+            priority
+          />
+          <span className="min-w-0">
+            <span className="block truncate font-serif text-xl font-semibold leading-none text-ink">
+              {siteProfile.shortName}
             </span>
-            <span className="text-[11px] text-[#526071] tracking-wide font-medium">
-              UBSI Kampus Margonda
+            <span className="mt-1 hidden text-xs text-ink-muted xl:block">
+              {siteProfile.university}
             </span>
-          </div>
+          </span>
         </Link>
 
-        {/* Desktop Navigation Links */}
-        <nav className="hidden lg:flex items-center gap-1.5 xl:gap-2" aria-label="Menu Utama">
-          {navLinks.map((link) => {
-            const isActive = pathname === link.href;
+        <nav ref={navRef} className="site-nav hidden items-center lg:flex" aria-label="Navigasi utama">
+          {navigationItems.map((item) => {
+            const active = isActive(item.href);
             return (
               <Link
-                key={link.href}
-                href={link.href}
-                className={`min-h-[44px] inline-flex items-center px-3.5 py-1 text-sm transition-all duration-200 rounded-lg ${
-                  isActive
-                    ? "text-[#0e1b2a] font-semibold border-b-2 border-[#0e1b2a] bg-[#0e1b2a]/5"
-                    : "text-[#526071] font-medium hover:text-[#0e1b2a] hover:bg-[#0e1b2a]/5"
-                }`}
+                key={item.href}
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                className="site-nav-link"
               >
-                {link.label}
+                {item.label}
               </Link>
             );
           })}
+          <span aria-hidden="true" className="site-nav-indicator" />
         </nav>
 
-        {/* Right CTA & Mobile Hamburger */}
-        <div className="flex items-center gap-3">
-          <Link
-            href="/tentang#kontak"
-            className="hidden sm:inline-flex items-center justify-center min-h-[44px] px-5 rounded-xl border border-[#0e1b2a] text-[#0e1b2a] text-sm font-medium hover:bg-[#0e1b2a] hover:text-[#ffffff] transition-all duration-200 shadow-xs active:scale-[0.98]"
-          >
-            Hubungi Kami
-          </Link>
-
-          <button
-            type="button"
-            aria-label={mobileMenuOpen ? "Tutup menu" : "Buka menu"}
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden min-h-[44px] min-w-[44px] p-2 text-[#0e1b2a] hover:bg-[#ebe8e0] rounded-xl transition-colors flex items-center justify-center"
-          >
+        <Drawer.Root
+          open={mobileMenuOpen}
+          onOpenChange={setMobileMenuOpen}
+          swipeDirection="right"
+        >
+          <Drawer.Trigger className="inline-flex min-h-11 items-center gap-2 border border-ink px-3 text-sm font-semibold text-ink transition-colors hover:bg-surface lg:hidden">
+            <span>Menu</span>
             <svg
-              className="w-6 h-6"
+              aria-hidden="true"
+              className="h-5 w-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
-              {mobileMenuOpen ? (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              ) : (
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M4 7h16M4 12h16M4 17h16"
-                />
-              )}
+              <path strokeLinecap="round" strokeWidth="2" d="M4 7h16M4 12h16M4 17h16" />
             </svg>
-          </button>
-        </div>
-      </div>
+          </Drawer.Trigger>
 
-      {/* Mobile Menu Dropdown */}
-      {mobileMenuOpen && (
-        <div className="lg:hidden bg-[#fcf9f1] border-b border-[#e2ddd3] px-5 py-4 space-y-1 animate-fadeIn shadow-md">
-          {navLinks.map((link) => {
-            const isActive = pathname === link.href;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`block px-4 py-3 rounded-lg text-sm transition-colors ${
-                  isActive
-                    ? "bg-[#0e1b2a] text-white font-semibold"
-                    : "text-[#0e1b2a] font-medium hover:bg-[#f1eee6]"
-                }`}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-          <div className="pt-3 border-t border-[#e2ddd3]">
-            <Link
-              href="/tentang#kontak"
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-full inline-flex items-center justify-center min-h-[44px] px-5 rounded-xl bg-[#0e1b2a] text-white text-sm font-medium hover:bg-[#3c608b] transition-all shadow-xs"
-            >
-              Hubungi Kami
-            </Link>
-          </div>
-        </div>
-      )}
+          <Drawer.Portal>
+            <Drawer.Backdrop className="fixed inset-0 z-[70] bg-ink/55 transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 lg:hidden" />
+            <Drawer.Viewport className="pointer-events-none fixed inset-0 z-[80] flex justify-end lg:hidden">
+              <Drawer.Popup className="pointer-events-auto h-full w-[min(90vw,26rem)] bg-canvas shadow-[-16px_0_48px_rgba(14,27,42,0.24)] transition-transform duration-200 data-[ending-style]:translate-x-full data-[starting-style]:translate-x-full">
+                <Drawer.Content className="flex h-full flex-col overflow-y-auto px-5 pb-8 pt-5 sm:px-8">
+                  <div className="flex items-center justify-between border-b border-hairline pb-5">
+                    <div>
+                      <Drawer.Title className="font-serif text-2xl font-semibold text-ink">
+                        Navigasi HMTI
+                      </Drawer.Title>
+                      <Drawer.Description className="mt-1 text-sm text-ink-muted">
+                        Pilih halaman yang ingin dibuka.
+                      </Drawer.Description>
+                    </div>
+                    <Drawer.Close className="inline-flex min-h-11 min-w-11 items-center justify-center border border-ink text-sm font-semibold text-ink transition-colors hover:bg-surface">
+                      <span className="sr-only">Tutup menu</span>
+                      <svg
+                        aria-hidden="true"
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeWidth="2" d="M6 6l12 12M18 6L6 18" />
+                      </svg>
+                    </Drawer.Close>
+                  </div>
+
+                  <motion.nav
+                    className="mt-5 grid gap-1"
+                    aria-label="Navigasi seluler"
+                    initial={reduceMotion ? false : "hidden"}
+                    animate={mobileMenuOpen ? "visible" : "hidden"}
+                    variants={{
+                      hidden: {},
+                      visible: {
+                        transition: { delayChildren: 0.06, staggerChildren: 0.04 },
+                      },
+                    }}
+                  >
+                    {navigationItems.map((item, index) => {
+                      const active = isActive(item.href);
+                      return (
+                        <motion.div
+                          key={item.href}
+                          variants={{
+                            hidden: { opacity: 0, y: 12 },
+                            visible: { opacity: 1, y: 0, transition: { duration: 0.28, ease: [0.16, 1, 0.3, 1] } },
+                          }}
+                        >
+                          <Link
+                            href={item.href}
+                            aria-current={active ? "page" : undefined}
+                            onClick={() => {
+                              setMobileMenuOpen(false);
+                            }}
+                            className={`grid min-h-14 grid-cols-[2rem_1fr] items-center border-b px-2 text-base font-semibold transition-colors ${
+                              active
+                                ? "border-ink bg-ink text-white"
+                                : "border-hairline text-ink hover:bg-surface"
+                            }`}
+                          >
+                            <span className={active ? "text-signal" : "text-steel"} aria-hidden="true">
+                              {String(index + 1).padStart(2, "0")}
+                            </span>
+                            <span>{item.label}</span>
+                          </Link>
+                        </motion.div>
+                      );
+                    })}
+                  </motion.nav>
+                </Drawer.Content>
+              </Drawer.Popup>
+            </Drawer.Viewport>
+          </Drawer.Portal>
+        </Drawer.Root>
+      </div>
     </header>
   );
 }
-
-
