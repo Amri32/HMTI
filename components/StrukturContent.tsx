@@ -170,7 +170,7 @@ function KartuSimpul({
       </span>
       <span className="min-w-0 text-left">
         <span
-          className={`block text-[10px] font-semibold uppercase tracking-[0.14em] ${utama ? "text-signal" : "text-steel"}`}
+          className={`block text-[11px] font-semibold uppercase tracking-[0.14em] ${utama ? "text-signal" : "text-steel"}`}
         >
           {jabatan}
         </span>
@@ -369,8 +369,8 @@ export default function StrukturContent() {
           </Naik>
           <Naik delay={0.16}>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-ink-muted">
-              Kepengurusan HMTI UBSI Margonda periode {data.periode || "berjalan"} terdiri atas Badan Pengurus Harian —
-              Ketua, Wakil Ketua, Sekretaris, dan Bendahara — serta tiga divisi: PSDM, KOMINFO, dan LITBANG.
+              Kepengurusan HMTI UBSI Margonda periode {data.periode || "berjalan"} terdiri atas Badan Pengurus Harian
+              (Ketua, Wakil Ketua, Sekretaris, dan Bendahara) serta tiga divisi: PSDM, KOMINFO, dan LITBANG.
             </p>
           </Naik>
           <Naik delay={0.24}>
@@ -382,7 +382,7 @@ export default function StrukturContent() {
               ].map(([kunci, nilai]) => (
                 <div key={kunci}>
                   <span className="font-serif text-xl text-ink">{kunci}</span>
-                  <span className="font-sans text-[12px] uppercase tracking-[0.08em] text-ink-muted">{nilai}</span>
+                  <span className="font-sans text-[12px] text-ink-muted">{nilai}</span>
                 </div>
               ))}
             </div>

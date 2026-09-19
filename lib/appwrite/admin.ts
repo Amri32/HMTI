@@ -4,6 +4,12 @@ import { APPWRITE_ADMIN_TEAM_ID, APPWRITE_DATABASE_ID, COLL_AUDIT_LOG } from "./
 
 export type AdminAccess = "guest" | "forbidden" | "ok";
 
+// Event browser yang dikirim form login setelah sesi Appwrite dibuat.
+// Guard RequireAdmin memeriksa ulang akses saat event ini terjadi, karena
+// login bisa terjadi di rute tujuan itu sendiri (form inline) tanpa perpindahan
+// pathname — efek guard yang bergantung [pathname] tidak terpicu dalam kasus itu.
+export const ADMIN_SESI_EVENT = "hmti-admin-sesi";
+
 // Satu pemeriksaan akses untuk guard dan operasi admin.
 // Sesi Appwrite membedakan user yang belum masuk dari user yang bukan member team.
 // Catatan: teams.list() hanya mengembalikan team yang diikuti sesi ini,

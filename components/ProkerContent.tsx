@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { getContentRepository, type ProkerItem } from "@/lib/content-repo";
+import { formatTanggalId } from "@/lib/format";
 
 function LinkArrow() {
   return (
@@ -11,6 +12,12 @@ function LinkArrow() {
       <path d="M5 12h14M13 6l6 6-6 6" />
     </svg>
   );
+}
+
+// Tanggal selesai = data (bukan label) → sentence case per aturan audit-002;
+// pk-status induknya uppercase, jadi chip ini menimpa transform.
+function formatTanggalSelesai(iso: string | null): string {
+  return iso ? formatTanggalId(iso) : "";
 }
 
 // Daftar program kerja dari repository (Appwrite bila terkonfigurasi,
@@ -61,7 +68,10 @@ export default function ProkerContent() {
   return (
     <section className="about-container pk-list" aria-label="Daftar program kerja">
       {items.map((program, index) => (
-        <article className="pk-item" key={program.id}>
+        <article
+          className={`pk-item ${program.status === "Selesai" ? "pk-item--done" : ""}`}
+          key={program.id}
+        >
           {program.image ? (
             <Image
               className="pk-item-preview"
@@ -81,12 +91,26 @@ export default function ProkerContent() {
             <p className="pk-status">
               <span aria-hidden="true" className="pk-status-mark" />
               {program.status}
+              {formatTanggalSelesai(program.completedAt) ? (
+                <span className="pk-status-date">
+                  {formatTanggalSelesai(program.completedAt)}
+                </span>
+              ) : null}
             </p>
             <h2>{program.name}</h2>
             <p className="pk-item-desc">{program.description}</p>
-            <Link href="/kontak" className="home-text-link">
-              Tanya program ini <LinkArrow />
-            </Link>
+            {program.status === "Selesai" && program.completedAt ? (
+              <Link
+                href={`/proker/detail?slug=${encodeURIComponent(program.slug)}`}
+                className="home-text-link"
+              >
+                Lihat detail proker <LinkArrow />
+              </Link>
+            ) : (
+              <Link href="/kontak" className="home-text-link">
+                Tanya program ini <LinkArrow />
+              </Link>
+            )}
           </div>
         </article>
       ))}

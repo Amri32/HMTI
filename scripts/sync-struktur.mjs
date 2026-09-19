@@ -101,7 +101,10 @@ async function hapusSemua(koleksi) {
 async function main() {
   console.log(`→ Appwrite ${ENDPOINT} (project ${cred.projectId})`);
 
-  // 1. Pastikan atribut foto ada di struktur_members (project lama belum punya).
+  // 1. Pastikan atribut foto ada di struktur_members (project lama belum punya)
+  //    dan purge atribut PII nim/email — koleksi ini read("any"), payload baru
+  //    tidak lagi mengirim field itu (required di project lama = dokumen gagal
+  //    dibuat bila atributnya masih ada).
   const attrs = (await api("GET", "/databases/hmti/collections/struktur_members/attributes")).attributes;
   if (!attrs.some((a) => a.key === "foto")) {
     console.log("→ membuat atribut foto (string 255)…");
@@ -112,6 +115,17 @@ async function main() {
     });
     await tungguAtribut("struktur_members");
     console.log("  ✓ atribut foto tersedia");
+  }
+  for (const [koleksi, key] of [
+    ["struktur_members", "nim"],
+    ["struktur_members", "email"],
+    ["struktur_divisi", "nim"],
+  ]) {
+    const da = (await api("GET", `/databases/hmti/collections/${koleksi}/attributes`)).attributes;
+    if (!da.some((a) => a.key === key)) continue;
+    await api("DELETE", `/databases/hmti/collections/${koleksi}/attributes/${key}`);
+    await tungguAtribut(koleksi);
+    console.log(`  ✓ purge atribut PII ${koleksi}.${key}`);
   }
 
   // 2. Hapus seluruh data struktur lama (fiktif).
@@ -130,7 +144,6 @@ async function main() {
         ikon: d.ikon,
         nama: d.nama,
         koordinator: "",
-        nim: "",
         tag: [],
         tugas: d.tugas,
         proker: [],
@@ -153,10 +166,8 @@ async function main() {
         divisi_id: null,
         lencana_peran: m.lencana_peran,
         nama: m.nama,
-        nim: "",
         deskripsi: "",
         presidium: "",
-        email: "",
         foto: FOTO[m.nama] ?? "",
         utama: m.utama,
         sort_order: i + 1,
@@ -180,10 +191,8 @@ async function main() {
           divisi_id: divisiId.get(nomor) ?? null,
           lencana_peran: "Anggota",
           nama,
-          nim: "",
           deskripsi: "",
           presidium: "",
-          email: "",
           foto: FOTO[nama] ?? "",
           utama: false,
           sort_order: urutan,

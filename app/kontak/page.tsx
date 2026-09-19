@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
 import Image from "next/image";
 import CollaborationForm from "@/components/CollaborationForm";
 import ContactSignal from "@/components/motion/ContactSignal";
 import { aboutAddress, contactEmail, siteProfile } from "../site-content";
-import { trackPageView, trackCollabSignal } from "@/lib/appwrite/tracking";
+import { trackCollabSignal } from "@/lib/appwrite/tracking";
 
 function ArrowDown() {
   return (
@@ -27,10 +26,6 @@ const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComp
 const [emailLocalPart, emailDomain] = contactEmail.split("@");
 
 export default function ContactPage() {
-  useEffect(() => {
-    trackPageView("/kontak");
-  }, []);
-
   return (
     <div className="contact-page">
       <header className="contact-hero">

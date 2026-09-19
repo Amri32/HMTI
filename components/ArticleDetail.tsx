@@ -5,7 +5,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { getContentRepository, type BeritaItem } from "@/lib/content-repo";
-import { normalizeBeritaSlug } from "@/lib/content-path";
+import { getBeritaHref, normalizeBeritaSlug } from "@/lib/content-path";
+
+const RELATED_LIMIT = 4;
 
 type ArticleState =
   | { status: "loading" }
@@ -17,6 +19,26 @@ export default function ArticleDetail() {
   const searchParams = useSearchParams();
   const slug = normalizeBeritaSlug(searchParams.get("slug"));
   const [state, setState] = useState<ArticleState>({ status: "loading" });
+  const [otherArticles, setOtherArticles] = useState<BeritaItem[]>([]);
+
+  useEffect(() => {
+    if (!slug) return;
+
+    let active = true;
+    getContentRepository()
+      .getBerita()
+      .then((all) => {
+        if (active) setOtherArticles(all.filter((item) => item.id !== slug));
+      })
+      .catch(() => {
+        // Daftar terbitan lain bersifat pelengkap: kalau gagal, rail cukup kosong.
+        if (active) setOtherArticles([]);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [slug]);
 
   useEffect(() => {
     if (!slug) return;
@@ -72,10 +94,23 @@ export default function ArticleDetail() {
 
   const { article } = state;
   const paragraphs = article.body.length > 0 ? article.body : [article.excerpt];
+  // Rubrik yang sama didahulukan supaya rail terasa sebagai bacaan lanjutan, bukan daftar acak.
+  const related = [
+    ...otherArticles.filter((item) => item.section === article.section),
+    ...otherArticles.filter((item) => item.section !== article.section),
+  ].slice(0, RELATED_LIMIT);
 
   return (
     <main className="news-page">
       <article className="news-container news-article">
+        <nav className="news-breadcrumbs" aria-label="Breadcrumb">
+          <Link href="/">Beranda</Link>
+          <span aria-hidden="true">/</span>
+          <Link href="/berita">Berita &amp; Artikel</Link>
+          <span aria-hidden="true">/</span>
+          <strong>{article.section}</strong>
+        </nav>
+
         <Link href="/berita" className="news-article-back">
           <span aria-hidden="true">←</span> Kembali ke katalog
         </Link>
@@ -118,12 +153,45 @@ export default function ArticleDetail() {
         ) : null}
 
         <div className="news-article-content">
-          <p className="news-article-label">Isi artikel</p>
           <div className="news-article-prose">
             {paragraphs.map((paragraph, index) => (
               <p key={`${article.id}-${index}`}>{paragraph}</p>
             ))}
           </div>
+
+          {related.length > 0 ? (
+            <aside className="news-related" aria-labelledby="news-related-heading">
+              <h2 className="news-related-heading" id="news-related-heading">
+                Terbitan lain
+              </h2>
+              <ul className="news-related-list">
+                {related.map((item) => (
+                  <li key={item.id}>
+                    <Link className="news-related-item" href={getBeritaHref(item.id)}>
+                      <span className="news-related-thumb">
+                        {item.image ? (
+                          <Image src={item.image} alt="" fill sizes="104px" />
+                        ) : null}
+                      </span>
+                      <span className="news-related-copy">
+                        <span className="news-related-section">{item.section}</span>
+                        <span className="news-related-title">{item.title}</span>
+                        <span className="news-related-meta">
+                          {item.date}
+                          {item.readTime ? (
+                            <>
+                              {" "}
+                              <span aria-hidden="true">·</span> {item.readTime}
+                            </>
+                          ) : null}
+                        </span>
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </aside>
+          ) : null}
         </div>
       </article>
     </main>

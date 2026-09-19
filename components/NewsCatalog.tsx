@@ -8,14 +8,6 @@ import { getBeritaHref } from "@/lib/content-path";
 
 const filters = ["Semua terbitan", "Kegiatan", "Opini & Teknologi", "Riset & Akademik", "Warta Himpunan"] as const;
 
-function ArrowIcon() {
-  return (
-    <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-      <path d="M5 12h14M13 6l6 6-6 6" />
-    </svg>
-  );
-}
-
 export default function NewsCatalog() {
   const [stories, setStories] = useState<BeritaItem[] | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -120,7 +112,7 @@ export default function NewsCatalog() {
                   <h3>{story.title}</h3>
                   <p>{story.excerpt}</p>
                   <Link className="news-card-link" href={getBeritaHref(story.id)}>
-                    Baca artikel <ArrowIcon />
+                    Baca artikel
                   </Link>
                 </div>
               </article>

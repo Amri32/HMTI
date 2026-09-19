@@ -10,6 +10,18 @@ export type ProkerDoc = Models.Document & {
   sort_order: number;
   published: boolean;
   archived_at: string | null;
+  // Detail penyelesaian (status "Selesai") — diisi admin lewat panel.
+  slug: string | null;
+  completed_at: string | null;
+  started_at: string | null;
+  event_time: string | null;
+  location: string | null;
+  maps_url: string | null;
+  dresscode: string | null;
+  detail_body: string[] | null;
+  documentation: string[] | null;
+  outcome: string | null;
+  announcement_note: string | null;
 };
 
 export type BeritaDoc = Models.Document & {
@@ -43,7 +55,6 @@ export type StrukturDivisiDoc = Models.Document & {
   ikon: string;
   nama: string;
   koordinator: string;
-  nim: string;
   tag: string[];
   tugas: string;
   proker: string[];
@@ -58,10 +69,11 @@ export type StrukturMemberDoc = Models.Document & {
   divisi_id: string | null;
   lencana_peran: string;
   nama: string;
-  nim: string;
   deskripsi: string;
   presidium: string;
-  email: string;
+  // ponytail: NIM/email tidak boleh kembali ke koleksi ini — permission-nya
+  // read("any"). Data kontak pengurus butuh koleksi terpisah ber-permission
+  // team:admin bila suatu saat diperlukan.
   // Path foto publik (cth. "/pengurus/9.png"). Opsional — bila kosong, foto
   // dicari dari peta resmi nama→foto di lib/struktur-pengurus.ts.
   foto: string | null;
