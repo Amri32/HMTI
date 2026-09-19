@@ -1,16 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import Link from "next/link";
-import { Databases, ID, Query } from "appwrite";
+import { Databases, ID, Query, Storage } from "appwrite";
 import { getAppwriteClient } from "@/lib/appwrite/client";
 import {
+  APPWRITE_BUCKET_ID,
   APPWRITE_DATABASE_ID,
   COLL_PROKER,
 } from "@/lib/appwrite/schema";
 import type { ProkerDoc } from "@/lib/appwrite/types";
 import { logAudit } from "@/lib/appwrite/admin";
 import { mediaUrl } from "@/lib/appwrite/media";
+import {
+  cekFileGambar,
+  cekHasilKompresi,
+  kompresGambar,
+} from "@/lib/image-compress";
 import ImagePicker from "@/components/admin/ImagePicker";
 import DeleteButton from "@/components/admin/DeleteButton";
 import {
@@ -37,6 +43,18 @@ type FormState = {
   image: string;
   sortOrder: number;
   published: boolean;
+  // Slug URL (detail proker selesai: /proker/detail?slug=...). Diisi otomatis
+  // dari nama bila dibiarkan kosong.
+  slug: string;
+  // Detail penyelesaian — tampil di form saat status "Selesai".
+  completedAt: string; // yyyy-MM-dd dari input date
+  eventTime: string;
+  location: string;
+  mapsUrl: string;
+  dresscode: string;
+  announcementNote: string; // kutipan arsip pengumuman (verbatim)
+  outcome: string; // hasil & evaluasi pasca-kegiatan
+  documentation: string[]; // fileId dokumentasi, urut tampil
 };
 
 const FORM_KOSONG: FormState = {
@@ -46,15 +64,48 @@ const FORM_KOSONG: FormState = {
   image: "",
   sortOrder: 0,
   published: true,
+  slug: "",
+  completedAt: "",
+  eventTime: "",
+  location: "",
+  mapsUrl: "",
+  dresscode: "",
+  announcementNote: "",
+  outcome: "",
+  documentation: [],
 };
+
+// "Bakti Sosial Panti Asuhan!" → "bakti-sosial-panti-asuhan"
+function slugify(teks: string): string {
+  return teks
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^\p{Letter}\p{Number}]+/gu, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+// Input <input type="date"> memberi "2026-08-29"; Appwrite datetime menerima
+// ISO penuh — samakan format dengan seed ("…T00:00:00.000Z").
+function tanggalKeIso(tanggal: string): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal)) return null;
+  return new Date(`${tanggal}T00:00:00.000Z`).toISOString();
+}
+
+function isoKeTanggal(iso: string | null): string {
+  return iso ? iso.slice(0, 10) : "";
+}
 
 export default function AdminProkerPage() {
   const [items, setItems] = useState<ProkerDoc[]>([]);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(FORM_KOSONG);
   const [sibuk, setSibuk] = useState(false);
+  const [dokumenBusy, setDokumenBusy] = useState(false);
+  const [dokumenError, setDokumenError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sukses, setSukses] = useState<string | null>(null);
+
+  const selesai = form.status === "Selesai";
 
   const muat = useCallback(async () => {
     const db = new Databases(getAppwriteClient());
@@ -81,6 +132,10 @@ export default function AdminProkerPage() {
   async function simpan(e: FormEvent) {
     e.preventDefault();
     if (sibuk) return;
+    if (selesai && !form.completedAt) {
+      setError("Tanggal selesai wajib diisi untuk program berstatus Selesai.");
+      return;
+    }
     setSibuk(true);
     setError(null);
     setSukses(null);
@@ -94,14 +149,25 @@ export default function AdminProkerPage() {
         image_alt: form.image ? `Preview program kerja ${form.name.trim()}` : null,
         sort_order: Number(form.sortOrder) || 0,
         published: form.published,
+        slug: slugify(form.slug || form.name),
+        // Status bukan "Selesai" → fakta penyelesaian dikosongkan agar tidak
+        // ada sisa data lama yang tampil bila status berubah lagi nanti.
+        completed_at: selesai ? tanggalKeIso(form.completedAt) : null,
+        event_time: selesai ? form.eventTime.trim() || null : null,
+        location: selesai ? form.location.trim() || null : null,
+        maps_url: selesai ? form.mapsUrl.trim() || null : null,
+        dresscode: selesai ? form.dresscode.trim() || null : null,
+        announcement_note: selesai ? form.announcementNote.trim() || null : null,
+        outcome: selesai ? form.outcome.trim() || null : null,
+        documentation: selesai ? form.documentation : [],
       };
       if (editId) {
         await db.updateDocument(APPWRITE_DATABASE_ID, COLL_PROKER, editId, data);
-        await logAudit("Perbarui", "proker", editId, { name: data.name });
+        await logAudit("Perbarui", "proker", editId, { name: data.name, status: data.status });
         setSukses("Program kerja diperbarui.");
       } else {
         const doc = await db.createDocument(APPWRITE_DATABASE_ID, COLL_PROKER, ID.unique(), data);
-        await logAudit("Buat", "proker", doc.$id, { name: data.name });
+        await logAudit("Buat", "proker", doc.$id, { name: data.name, status: data.status });
         setSukses("Program kerja dibuat.");
       }
       setForm(FORM_KOSONG);
@@ -111,6 +177,42 @@ export default function AdminProkerPage() {
       setError("Gagal menyimpan program kerja.");
     } finally {
       setSibuk(false);
+    }
+  }
+
+  // Unggah banyak foto dokumentasi sekaligus: kompres per file di browser,
+  // simpan fileId ke array form (disimpan ke dokumen saat tombol Simpan).
+  async function tambahDokumentasi(e: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0 || dokumenBusy) return;
+    setDokumenBusy(true);
+    setDokumenError(null);
+    try {
+      const storage = new Storage(getAppwriteClient());
+      const ids: string[] = [];
+      for (const file of files) {
+        const gagal = cekFileGambar(file);
+        if (gagal) {
+          setDokumenError(`${file.name}: ${gagal}`);
+          continue;
+        }
+        const { file: finalFile } = await kompresGambar(file);
+        const melebihiBatas = cekHasilKompresi(finalFile);
+        if (melebihiBatas) {
+          setDokumenError(`${file.name}: ${melebihiBatas}`);
+          continue;
+        }
+        const res = await storage.createFile(APPWRITE_BUCKET_ID, ID.unique(), finalFile);
+        ids.push(res.$id);
+      }
+      if (ids.length > 0) {
+        setForm((f) => ({ ...f, documentation: [...f.documentation, ...ids] }));
+      }
+    } catch {
+      setDokumenError("Gagal mengunggah dokumentasi. Periksa koneksi lalu coba lagi.");
+    } finally {
+      setDokumenBusy(false);
     }
   }
 
@@ -132,6 +234,15 @@ export default function AdminProkerPage() {
       image: doc.image ?? "",
       sortOrder: doc.sort_order,
       published: doc.published,
+      slug: doc.slug ?? "",
+      completedAt: isoKeTanggal(doc.completed_at),
+      eventTime: doc.event_time ?? "",
+      location: doc.location ?? "",
+      mapsUrl: doc.maps_url ?? "",
+      dresscode: doc.dresscode ?? "",
+      announcementNote: doc.announcement_note ?? "",
+      outcome: doc.outcome ?? "",
+      documentation: doc.documentation ?? [],
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -141,7 +252,7 @@ export default function AdminProkerPage() {
       <AdmPageHead
         kicker="Modul 02"
         title="Program Kerja"
-        lede="Kelola program kerja himpunan. Perubahan langsung tampil di halaman publik /proker."
+        lede="Kelola program kerja himpunan. Program berstatus Selesai mendapat halaman detail publik."
         meta={
           <>
             Portal HMTI Margonda
@@ -185,14 +296,25 @@ export default function AdminProkerPage() {
             />
           </Field>
 
-          <Field label="Status">
-            <SelectCustom
-              value={form.status}
-              options={[...STATUS_OPTIONS]}
-              onChange={(status) => setForm({ ...form, status })}
-              label="Pilih status"
-            />
-          </Field>
+          <div className="grid grid-cols-2 gap-5">
+            <Field label="Status">
+              <SelectCustom
+                value={form.status}
+                options={[...STATUS_OPTIONS]}
+                onChange={(status) => setForm({ ...form, status })}
+                label="Pilih status"
+              />
+            </Field>
+            <Field label="Urutan tampil">
+              <input
+                type="number"
+                className={inputCls}
+                value={form.sortOrder}
+                onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) })}
+                min={0}
+              />
+            </Field>
+          </div>
 
           <Field label="Deskripsi" hint="Teks terstruktur (paragraf), bukan HTML.">
             <textarea
@@ -208,24 +330,153 @@ export default function AdminProkerPage() {
             <ImagePicker value={form.image} onChange={(image) => setForm({ ...form, image })} />
           </Field>
 
-          <div className="grid grid-cols-2 gap-5">
-            <Field label="Urutan tampil">
-              <input
-                type="number"
-                className={inputCls}
-                value={form.sortOrder}
-                onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) })}
-                min={0}
-              />
-            </Field>
-            <div className="flex items-end pb-2">
-              <Toggle
-                checked={form.published}
-                onChange={(published) => setForm({ ...form, published })}
-                label="Terbitkan"
-              />
-            </div>
-          </div>
+          <Toggle
+            checked={form.published}
+            onChange={(published) => setForm({ ...form, published })}
+            label="Terbitkan"
+          />
+
+          {/* ── Detail penyelesaian: hanya relevan untuk program Selesai ── */}
+          {selesai ? (
+            <fieldset className="adm-panel adm-panel-body space-y-5 border border-dashed border-[var(--color-hairline)]">
+              <legend className="px-2 text-sm font-bold uppercase tracking-[0.08em] text-ink">
+                Detail penyelesaian
+              </legend>
+              <p className="adm-hint">
+                Data ini tampil di halaman detail publik <code>/proker/detail?slug=…</code>. Bagian
+                yang dikosongkan tidak dirender di halaman — isi yang tersedia saja.
+              </p>
+
+              <div className="grid grid-cols-2 gap-5">
+                <Field label="Tanggal selesai *">
+                  <input
+                    type="date"
+                    className={inputCls}
+                    value={form.completedAt}
+                    onChange={(e) => setForm({ ...form, completedAt: e.target.value })}
+                    required
+                  />
+                </Field>
+                <Field label="Waktu" hint="cth. 09.00">
+                  <input
+                    className={inputCls}
+                    value={form.eventTime}
+                    onChange={(e) => setForm({ ...form, eventTime: e.target.value })}
+                    placeholder="09.00"
+                  />
+                </Field>
+              </div>
+
+              <div className="grid grid-cols-2 gap-5">
+                <Field label="Titik kumpul / lokasi">
+                  <input
+                    className={inputCls}
+                    value={form.location}
+                    onChange={(e) => setForm({ ...form, location: e.target.value })}
+                    placeholder="cth. Taman Merdeka"
+                  />
+                </Field>
+                <Field label="Dresscode">
+                  <input
+                    className={inputCls}
+                    value={form.dresscode}
+                    onChange={(e) => setForm({ ...form, dresscode: e.target.value })}
+                    placeholder="cth. PDH HMTI"
+                  />
+                </Field>
+              </div>
+
+              <Field label="Link Google Maps" hint="Tautan lokasi; kosongkan bila tidak ada.">
+                <input
+                  type="url"
+                  className={inputCls}
+                  value={form.mapsUrl}
+                  onChange={(e) => setForm({ ...form, mapsUrl: e.target.value })}
+                  placeholder="https://maps.app.goo.gl/…"
+                />
+              </Field>
+
+              <Field
+                label="Arsip pengumuman"
+                hint="Teks pengumuman pelaksanaan apa adanya; ditampilkan sebagai kutipan arsip."
+              >
+                <textarea
+                  className={`${textareaCls} min-h-28`}
+                  value={form.announcementNote}
+                  onChange={(e) => setForm({ ...form, announcementNote: e.target.value })}
+                  placeholder="Tempel teks pengumuman yang dulu dikirim ke anggota…"
+                />
+              </Field>
+
+              <Field label="Hasil & evaluasi" hint="Ringkasan outcome kegiatan; bagian paling bernilai untuk arsip organisasi.">
+                <textarea
+                  className={`${textareaCls} min-h-28`}
+                  value={form.outcome}
+                  onChange={(e) => setForm({ ...form, outcome: e.target.value })}
+                  placeholder="Tuliskan hasil kegiatan setelah pelaksanaan…"
+                />
+              </Field>
+
+              <Field
+                label="Dokumentasi foto"
+                hint="Bisa pilih beberapa file sekaligus; dikompresi otomatis. Tekan Simpan untuk menyimpan urutan ini."
+              >
+                <div className="space-y-3">
+                  {form.documentation.length > 0 ? (
+                    <ul className="flex flex-wrap gap-3">
+                      {form.documentation.map((fileId, i) => (
+                        <li key={fileId} className="relative">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={mediaUrl(fileId, 160)}
+                            alt={`Dokumentasi ${i + 1}`}
+                            className="h-20 w-28 border border-[var(--color-hairline)] object-cover"
+                          />
+                          <button
+                            type="button"
+                            aria-label={`Hapus dokumentasi ${i + 1}`}
+                            onClick={() =>
+                              setForm((f) => ({
+                                ...f,
+                                documentation: f.documentation.filter((id) => id !== fileId),
+                              }))
+                            }
+                            className="absolute -right-2 -top-2 h-6 w-6 border border-[var(--color-hairline)] bg-surface text-[12px] font-bold text-ink hover:bg-ink hover:text-surface"
+                          >
+                            ×
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  <label className="adm-dropzone">
+                    <span className="adm-dropzone-icon" aria-hidden="true">
+                      ↑
+                    </span>
+                    <span className="text-sm font-semibold text-ink">
+                      {dokumenBusy ? "Mengompres & mengunggah…" : "Pilih foto dokumentasi"}
+                    </span>
+                    <span className="text-[12px] text-ink-muted">
+                      JPG, PNG, WebP · beberapa file sekaligus
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="sr-only"
+                      onChange={tambahDokumentasi}
+                      disabled={dokumenBusy}
+                    />
+                  </label>
+                  {dokumenError ? (
+                    <p role="alert" className="adm-alert adm-alert--error">
+                      <span>{dokumenError}</span>
+                    </p>
+                  ) : null}
+                </div>
+              </Field>
+            </fieldset>
+          ) : null}
 
           {error ? <KotakError>{error}</KotakError> : null}
           {sukses ? <KotakSukses>{sukses}</KotakSukses> : null}
@@ -248,6 +499,7 @@ export default function AdminProkerPage() {
           <ul className="adm-list mt-4">
             {items.map((doc) => {
               const arsip = Boolean(doc.archived_at);
+              const urlDetail = `/proker/detail?slug=${encodeURIComponent(doc.slug || doc.$id)}`;
               return (
                 <li key={doc.$id} className={`adm-row ${arsip ? "adm-row--archived" : ""}`}>
                   <div className="flex items-start gap-3">
@@ -276,6 +528,11 @@ export default function AdminProkerPage() {
                     {doc.published && !arsip ? (
                       <Link href="/proker" className="adm-btn-ghost">
                         Lihat halaman
+                      </Link>
+                    ) : null}
+                    {doc.published && doc.status === "Selesai" ? (
+                      <Link href={urlDetail} className="adm-btn-ghost">
+                        Lihat detail
                       </Link>
                     ) : null}
                     <button

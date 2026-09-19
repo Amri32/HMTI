@@ -33,7 +33,6 @@ type DivisiForm = {
   ikon: Ikon;
   nama: string;
   koordinator: string;
-  nim: string;
   tag: string[];
   tugas: string;
   proker: string[];
@@ -47,7 +46,6 @@ const DIVISI_KOSONG: DivisiForm = {
   ikon: "terminal",
   nama: "",
   koordinator: "",
-  nim: "",
   tag: [""],
   tugas: "",
   proker: [""],
@@ -60,10 +58,8 @@ type MemberForm = {
   divisiId: string;
   lencanaPeran: string;
   nama: string;
-  nim: string;
   deskripsi: string;
   presidium: string;
-  email: string;
   foto: string;
   utama: boolean;
   sortOrder: number;
@@ -75,10 +71,8 @@ const MEMBER_KOSONG: MemberForm = {
   divisiId: "",
   lencanaPeran: "",
   nama: "",
-  nim: "",
   deskripsi: "",
   presidium: "",
-  email: "",
   foto: "",
   utama: false,
   sortOrder: 0,
@@ -174,7 +168,6 @@ export default function AdminStrukturPage() {
         ikon: dForm.ikon,
         nama: dForm.nama.trim(),
         koordinator: dForm.koordinator.trim(),
-        nim: dForm.nim.trim(),
         tag: dForm.tag.map((t) => t.trim()).filter(Boolean),
         tugas: dForm.tugas.trim(),
         proker: dForm.proker.map((p) => p.trim()).filter(Boolean),
@@ -219,10 +212,8 @@ export default function AdminStrukturPage() {
         divisi_id: mForm.kategori === "anggota" && mForm.divisiId ? mForm.divisiId : null,
         lencana_peran: mForm.lencanaPeran.trim(),
         nama: mForm.nama.trim(),
-        nim: mForm.nim.trim(),
         deskripsi: mForm.deskripsi.trim(),
         presidium: mForm.presidium.trim(),
-        email: mForm.email.trim(),
         foto: mForm.foto.trim(),
         utama: mForm.utama,
         sort_order: Number(mForm.sortOrder) || 0,
@@ -270,7 +261,6 @@ export default function AdminStrukturPage() {
       ikon: (IKON_OPTIONS.some((i) => i.value === doc.ikon) ? doc.ikon : "terminal") as DivisiForm["ikon"],
       nama: doc.nama,
       koordinator: doc.koordinator,
-      nim: doc.nim,
       tag: doc.tag.length ? [...doc.tag] : [""],
       tugas: doc.tugas,
       proker: doc.proker.length ? [...doc.proker] : [""],
@@ -287,10 +277,8 @@ export default function AdminStrukturPage() {
       divisiId: doc.divisi_id ?? "",
       lencanaPeran: doc.lencana_peran,
       nama: doc.nama,
-      nim: doc.nim,
       deskripsi: doc.deskripsi,
       presidium: doc.presidium,
-      email: doc.email,
       foto: doc.foto ?? "",
       utama: doc.utama,
       sortOrder: doc.sort_order,
@@ -392,23 +380,14 @@ export default function AdminStrukturPage() {
               />
             </Field>
 
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Koordinator">
-                <input
-                  className={inputCls}
-                  value={dForm.koordinator}
-                  onChange={(e) => setDForm({ ...dForm, koordinator: e.target.value })}
-                  required
-                />
-              </Field>
-              <Field label="NIM koordinator">
-                <input
-                  className={inputCls}
-                  value={dForm.nim}
-                  onChange={(e) => setDForm({ ...dForm, nim: e.target.value })}
-                />
-              </Field>
-            </div>
+            <Field label="Koordinator">
+              <input
+                className={inputCls}
+                value={dForm.koordinator}
+                onChange={(e) => setDForm({ ...dForm, koordinator: e.target.value })}
+                required
+              />
+            </Field>
 
             <Field label="Tag" hint="Label singkat (Web Dev, MedSos, dsb).">
               <UbahList nilai={dForm.tag} onChange={(tag) => setDForm({ ...dForm, tag })} />
@@ -566,24 +545,15 @@ export default function AdminStrukturPage() {
               </Field>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="NIM">
-                <input
-                  className={inputCls}
-                  value={mForm.nim}
-                  onChange={(e) => setMForm({ ...mForm, nim: e.target.value })}
-                />
-              </Field>
-              <Field label="Urutan tampil">
-                <input
-                  type="number"
-                  className={inputCls}
-                  value={mForm.sortOrder}
-                  onChange={(e) => setMForm({ ...mForm, sortOrder: Number(e.target.value) })}
-                  min={0}
-                />
-              </Field>
-            </div>
+            <Field label="Urutan tampil">
+              <input
+                type="number"
+                className={inputCls}
+                value={mForm.sortOrder}
+                onChange={(e) => setMForm({ ...mForm, sortOrder: Number(e.target.value) })}
+                min={0}
+              />
+            </Field>
 
             <Field
               label="Path foto (opsional)"
@@ -605,14 +575,6 @@ export default function AdminStrukturPage() {
                     value={mForm.presidium}
                     onChange={(e) => setMForm({ ...mForm, presidium: e.target.value })}
                     placeholder="cth. Presidium 01"
-                  />
-                </Field>
-                <Field label="Email institusi">
-                  <input
-                    type="email"
-                    className={inputCls}
-                    value={mForm.email}
-                    onChange={(e) => setMForm({ ...mForm, email: e.target.value })}
                   />
                 </Field>
                 <Field label="Deskripsi">

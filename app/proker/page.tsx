@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import PageHeader from "@/components/PageHeader";
-import PageViewTracker from "@/components/PageViewTracker";
 import ProkerContent from "@/components/ProkerContent";
 import { siteProfile } from "../site-content";
 
@@ -22,7 +21,6 @@ function LinkArrow() {
 export default function ProgramKerjaPage() {
   return (
     <div>
-      <PageViewTracker page="/proker" />
       <PageHeader
         eyebrow="Program Kerja"
         title="Program kerja, dikerjakan dengan tertib."

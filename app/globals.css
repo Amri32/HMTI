@@ -129,7 +129,6 @@
     font-size: 0.72rem;
     font-weight: 600;
     letter-spacing: 0.1em;
-    text-transform: uppercase;
     color: var(--color-ink-muted);
   }
 
@@ -2669,11 +2668,51 @@
     transform: none;
   }
 
+  /* Aksi sekunder admin yang tampil sebagai tautan (lupa sandi, minta tautan
+     baru, kembali). Tinggi 44px supaya target sentuh memenuhi minimum. */
+  .admin-login-text-action {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    border: 0;
+    background: none;
+    padding: 0;
+    color: var(--color-steel);
+    font: inherit;
+    font-weight: 700;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--color-steel) 40%, transparent);
+    text-underline-offset: 3px;
+    cursor: pointer;
+    transition: color 180ms ease;
+  }
+
+  .admin-login-text-action:hover {
+    color: var(--color-ink);
+  }
+
+  .admin-login-submit-standalone {
+    margin-top: 2.5rem;
+  }
+
+  .admin-login-note {
+    border-left: 3px solid var(--color-steel);
+    background: var(--color-surface);
+    padding: 0.75rem 0.85rem;
+    color: var(--color-ink);
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+
   .admin-login-help {
     margin-top: 2.25rem;
     color: var(--color-ink-muted);
     font-size: 0.75rem;
     line-height: 1.6;
+  }
+
+  .admin-login-help p {
+    margin-top: 0.35rem;
   }
 
   .admin-login-help a {
@@ -3090,6 +3129,32 @@
     background: var(--color-surface);
   }
 
+  /* Selama slot gambar diambil dari Appwrite, <img> sengaja dirender nihil.
+     data-pending menjaga bidangnya tetap solid (bukan kosong) supaya halaman
+     tidak bergeser dan tidak ada foto fallback yang terlihat lalu terganti. */
+  .home-life-image[data-pending],
+  .home-program-image[data-pending],
+  .about-stage[data-pending] {
+    background: var(--color-surface);
+  }
+
+  /* Gambar slot menyala lembut saat benar-benar selesai dimuat (bukan saat
+     URL-nya dipasang) — transisi munculnya foto, bukan ganti-ganti foto. */
+  .home-life-image img,
+  .home-program-image img,
+  .home-hero-inset img,
+  .about-stage img {
+    opacity: 0;
+  }
+
+  .home-life-image img.slot-img-loaded,
+  .home-program-image img.slot-img-loaded,
+  .home-hero-inset img.slot-img-loaded,
+  .about-stage img.slot-img-loaded {
+    opacity: 1;
+    transition: opacity 420ms ease-out;
+  }
+
   .home-hero-photo {
     position: absolute;
     inset: 0 0 4.5rem 9%;
@@ -3114,6 +3179,8 @@
     transform: scale(1.018);
   }
 
+  /* Caption slot hanya dirender bila admin mengisinya di panel Media —
+     kehadirannya adalah informasi, bukan dekorasi, jadi tanpa gerbang animasi. */
   .home-hero-photo figcaption,
   .home-life-image figcaption,
   .home-program-image figcaption {
@@ -3121,19 +3188,12 @@
     right: 0.75rem;
     bottom: 0.75rem;
     z-index: 2;
+    max-width: calc(100% - 1.5rem);
     padding: 0.4rem 0.55rem;
     background: rgba(14, 27, 42, 0.9);
     color: white;
     font-size: 0.78rem;
-    line-height: 1;
-    opacity: 0;
-    transition: opacity 300ms ease;
-  }
-
-  .home-hero-photo[data-loaded="true"] figcaption,
-  .home-life-image[data-loaded="true"] figcaption,
-  .home-program-image[data-loaded="true"] figcaption {
-    opacity: 1;
+    line-height: 1.2;
   }
 
   .home-photo-note {
@@ -5269,7 +5329,6 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 0.45rem;
-    padding-block: 0.75rem;
     color: var(--color-ink-muted);
     font-size: 0.67rem;
     letter-spacing: 0.02em;
@@ -5278,6 +5337,32 @@
   .news-breadcrumbs strong {
     color: var(--color-ink);
     font-weight: 650;
+  }
+
+  /* Tautan breadcrumb memakai tinggi 44px sendiri supaya area sentuh tidak
+     tumpang tindih saat breadcrumb melipat jadi dua baris. */
+  .news-breadcrumbs a {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    margin-inline: -0.35rem;
+    padding-inline: 0.35rem;
+    color: inherit;
+    transition: color 180ms ease;
+  }
+
+  .news-breadcrumbs span,
+  .news-breadcrumbs strong {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+  }
+
+  .news-breadcrumbs a:hover {
+    color: var(--color-ink);
+    text-decoration: underline;
+    text-decoration-color: var(--color-signal);
+    text-underline-offset: 0.2rem;
   }
 
   .news-utility {
@@ -5460,7 +5545,7 @@
 
   .news-stat-board-foot {
     color: var(--color-ink-muted);
-    font-size: 0.6rem;
+    font-size: 0.66rem;
     letter-spacing: 0.07em;
   }
 
@@ -5469,11 +5554,10 @@
     flex-wrap: wrap;
     gap: 0.4rem;
     color: var(--color-steel);
-    font-size: 0.66rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
+    font-size: 0.7rem;
+    font-weight: 650;
+    letter-spacing: 0.01em;
     line-height: 1.5;
-    text-transform: uppercase;
   }.news-card-link {
     display: inline-flex;
     width: fit-content;
@@ -5488,12 +5572,8 @@
     text-decoration-thickness: 3px;
     text-underline-offset: 0.35rem;
     transition: color 180ms ease;
-  }.news-card-link svg {
-    transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
   }.news-card-link:hover {
     color: var(--color-steel);
-  }.news-card-link:hover svg {
-    transform: translateX(0.25rem);
   }
 
   .news-catalog {
@@ -5654,7 +5734,7 @@
     background: var(--color-canvas);
     color: var(--color-ink);
     font-family: var(--font-instrument-sans), system-ui, sans-serif;
-    font-size: 0.59rem;
+    font-size: 0.66rem;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -5717,7 +5797,7 @@
   }
 
   .news-article {
-    padding-block: clamp(2rem, 5vw, 4.5rem) clamp(4rem, 8vw, 8rem);
+    padding-block: clamp(1.5rem, 3vw, 2.5rem) clamp(4rem, 8vw, 8rem);
   }
 
   .news-article-back {
@@ -5738,21 +5818,21 @@
 
   .news-article-header {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(14rem, 0.28fr);
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.34fr);
     gap: clamp(2rem, 8vw, 8rem);
     align-items: end;
-    margin-top: clamp(3rem, 7vw, 6.5rem);
+    margin-top: clamp(2rem, 4vw, 3.5rem);
     padding-bottom: clamp(2rem, 4vw, 3.5rem);
     border-bottom: 1px solid var(--color-hairline);
   }
 
   .news-article-header h1 {
-    max-width: 18ch;
-    margin-top: 1.25rem;
+    max-width: 13ch;
+    margin-top: 1.35rem;
     font-family: var(--font-newsreader), Georgia, serif;
-    font-size: clamp(3rem, 7vw, 7rem);
+    font-size: clamp(3rem, 7vw, 7.3rem);
     font-weight: 430;
-    line-height: 0.92;
+    line-height: 0.89;
     letter-spacing: -0.045em;
     text-wrap: balance;
   }
@@ -5766,20 +5846,25 @@
     display: grid;
     grid-template-columns: minmax(6rem, 0.75fr) minmax(0, 1fr);
     gap: 1rem;
+    align-items: baseline;
     padding-block: 0.85rem;
     border-bottom: 1px solid var(--color-hairline);
   }
 
   .news-article-meta dt {
     color: var(--color-ink-muted);
-    font-size: 0.67rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
   }
 
   .news-article-meta dd {
     color: var(--color-ink);
-    font-size: 0.72rem;
+    font-size: 0.76rem;
     font-weight: 650;
+    font-variant-numeric: tabular-nums;
     text-align: right;
+    text-wrap: pretty;
   }
 
   .news-article-lede {
@@ -5805,13 +5890,70 @@
 
   .news-article-content {
     display: grid;
-    grid-template-columns: minmax(8rem, 0.3fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.34fr);
     gap: clamp(2rem, 8vw, 8rem);
-    max-width: 68rem;
+    align-items: start;
     margin-top: clamp(3rem, 7vw, 6rem);
   }
 
-  .news-article-label {
+  .news-article-prose {
+    min-width: 0;
+    max-width: 52rem;
+  }
+
+  /* ── Detail proker selesai (/proker/detail) ─────────────────────────
+     Struktur editorial dengan pemisah hairline — bukan kartu-kartu. */
+  .pk-detail-facts {
+    display: grid;
+    gap: 0;
+    margin-block: clamp(1.5rem, 3vw, 2.5rem);
+    border-top: 1px solid var(--color-hairline);
+  }
+  .pk-detail-facts > div {
+    display: grid;
+    grid-template-columns: minmax(7.5rem, 0.32fr) minmax(0, 1fr);
+    gap: 1rem;
+    padding-block: 0.8rem;
+    border-bottom: 1px solid var(--color-hairline);
+  }
+  .pk-detail-facts dt {
+    color: var(--color-steel);
+    font-family: var(--font-instrument-sans), system-ui, sans-serif;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .pk-detail-facts dd {
+    color: var(--color-ink);
+    font-size: 0.95rem;
+    font-weight: 550;
+  }
+  .pk-detail-maps {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--color-hairline);
+  }
+  .pk-detail-maps:hover {
+    text-decoration-color: var(--color-ink);
+  }
+
+  /* Arsip pengumuman: kutipan verbatim — border kiri menandai kutipan
+     sungguhan (informasi, bukan dekorasi). */
+  .pk-detail-announce {
+    margin-block: clamp(1.5rem, 3vw, 2.5rem);
+    padding-left: clamp(1rem, 2.5vw, 1.75rem);
+    border-left: 2px solid var(--color-ink);
+  }
+  .pk-detail-announce blockquote p {
+    color: var(--color-ink-muted);
+    font-size: 1rem;
+    line-height: 1.75;
+    text-wrap: pretty;
+  }
+  .pk-detail-announce figcaption {
+    margin-top: 0.75rem;
     color: var(--color-steel);
     font-family: var(--font-instrument-sans), system-ui, sans-serif;
     font-size: 0.68rem;
@@ -5820,8 +5962,224 @@
     text-transform: uppercase;
   }
 
-  .news-article-prose {
+  .pk-detail-gallery {
+    margin-top: clamp(2.5rem, 6vw, 4.5rem);
+  }
+  .pk-detail-gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(0.75rem, 2vw, 1.5rem);
+    margin-top: 1.25rem;
+    list-style: none;
+    padding: 0;
+  }
+  .pk-detail-gallery-grid li:first-child {
+    grid-column: 1 / -1;
+  }
+  .pk-detail-gallery-grid li:first-child .pk-doc-item {
+    aspect-ratio: 21 / 9;
+  }
+  /* Foto dokumentasi = tombol lightbox: hover zoom halus (state-transition,
+     MOTION 2), fokus keyboard terlihat. */
+  .pk-doc-item {
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    padding: 0;
+    border: none;
+    background: var(--color-soft);
+    cursor: zoom-in;
+  }
+  .pk-doc-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 360ms ease;
+  }
+  .pk-doc-item:hover img,
+  .pk-doc-item:focus-visible img {
+    transform: scale(1.03);
+  }
+  .pk-doc-item:focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 3px;
+  }
+
+  /* Lightbox: dialog native fullscreen, backdrop gelap pekat. */
+  .pk-lightbox {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    padding: 0;
+    border: none;
+    background: color-mix(in srgb, var(--color-ink) 94%, black);
+  }
+  .pk-lightbox::backdrop {
+    background: color-mix(in srgb, var(--color-ink) 94%, black);
+  }
+  .pk-lightbox-body {
+    position: relative;
+    display: flex;
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+  }
+  .pk-lightbox-body > img {
+    max-width: min(92vw, 88rem);
+    max-height: 82vh;
+    object-fit: contain;
+  }
+  .pk-lightbox-count {
+    position: absolute;
+    bottom: 1.25rem;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #fcf9f1;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+  }
+  .pk-lightbox-nav,
+  .pk-lightbox-close {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border: 1px solid rgb(252 249 241 / 0.28);
+    background: transparent;
+    color: #fcf9f1;
+    font-size: 1.1rem;
+    transition: background 180ms ease, border-color 180ms ease;
+  }
+  .pk-lightbox-nav:hover,
+  .pk-lightbox-close:hover,
+  .pk-lightbox-nav:focus-visible,
+  .pk-lightbox-close:focus-visible {
+    background: rgb(252 249 241 / 0.12);
+    border-color: rgb(252 249 241 / 0.6);
+  }
+  .pk-lightbox-nav--prev {
+    left: 1.25rem;
+  }
+  .pk-lightbox-nav--next {
+    right: 1.25rem;
+  }
+  .pk-lightbox-close {
+    top: 1.25rem;
+    right: 1.25rem;
+    font-size: 1.4rem;
+  }
+
+  .pk-detail-rail {
+    margin-top: clamp(3rem, 7vw, 5.5rem);
+  }
+
+  .pk-detail-cta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: clamp(3rem, 7vw, 5.5rem);
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-hairline);
+  }
+  .pk-detail-cta p {
+    color: var(--color-ink-muted);
+  }
+
+  .news-related {
+    position: sticky;
+    top: 5.5rem;
+  }
+
+  .news-related-heading {
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--color-hairline);
+    color: var(--color-steel);
+    font-family: var(--font-instrument-sans), system-ui, sans-serif;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .news-related-list {
+    margin-top: 0.5rem;
+  }
+
+  .news-related-item {
+    display: grid;
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0.9rem;
+    padding-block: 0.85rem;
+    border-bottom: 1px solid var(--color-hairline);
+  }
+
+  .news-related-thumb {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background: var(--color-soft);
+  }
+
+  .news-related-thumb img {
+    object-fit: cover;
+    transition: transform 520ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .news-related-item:hover .news-related-thumb img {
+    transform: scale(1.04);
+  }
+
+  .news-related-copy {
+    display: block;
     min-width: 0;
+  }
+
+  .news-related-section {
+    display: block;
+    color: var(--color-steel);
+    font-family: var(--font-instrument-sans), system-ui, sans-serif;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+
+  .news-related-title {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    margin-top: 0.3rem;
+    color: var(--color-ink);
+    font-family: var(--font-newsreader), Georgia, serif;
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.25;
+  }
+
+  .news-related-item:hover .news-related-title {
+    text-decoration: underline;
+    text-decoration-color: var(--color-signal);
+    text-underline-offset: 0.2rem;
+  }
+
+  .news-related-meta {
+    display: block;
+    margin-top: 0.3rem;
+    color: var(--color-ink-muted);
+    font-family: var(--font-instrument-sans), system-ui, sans-serif;
+    font-size: 0.66rem;
+    letter-spacing: 0.02em;
   }
 
   .news-article-prose p {
@@ -5870,6 +6228,19 @@
     grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.65fr);
     gap: 3rem;
   }
+
+  .news-article-content {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+  }
+
+  .news-related {
+    position: static;
+  }
+
+  .news-related-item {
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 767px) {.news-utility {
@@ -5909,13 +6280,9 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .news-article-header,
-  .news-article-content {
+  .news-article-header {
     grid-template-columns: 1fr;
     gap: 2rem;
-  }
-
-  .news-article-header {
     align-items: start;
   }
 
@@ -5937,6 +6304,25 @@
 
   .news-card-body {
     min-height: 13rem;
+  }
+
+  /* Detail proker di ponsel: fakta satu kolom, galeri satu kolom,
+     nav lightbox lebih dekat ke tepi. */
+  .pk-detail-facts > div {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
+  }
+  .pk-detail-gallery-grid {
+    grid-template-columns: 1fr;
+  }
+  .pk-detail-gallery-grid li:first-child .pk-doc-item {
+    aspect-ratio: 16 / 10;
+  }
+  .pk-lightbox-nav--prev {
+    left: 0.6rem;
+  }
+  .pk-lightbox-nav--next {
+    right: 0.6rem;
   }
 }
 
@@ -6029,12 +6415,29 @@
     text-transform: uppercase;
     color: var(--color-ink-muted);
   }
+  /* Tanggal selesai di samping status: data → sentence case (audit-002),
+     dipisah garis tipis dari label status. */
+  .pk-status-date {
+    border-left: 1px solid var(--color-hairline);
+    padding-left: 0.5rem;
+    text-transform: none;
+    letter-spacing: 0.02em;
+  }
 
   .pk-status-mark {
     width: 0.5rem;
     height: 0.5rem;
     border-radius: 50%;
     background: var(--color-steel);
+  }
+  /* Proker selesai = arsip: titik status outline (bukan titik "hidup"),
+     nomor index meredup — sinyal kejujuran visual, bukan hilang. */
+  .pk-item--done .pk-status-mark {
+    background: transparent;
+    box-shadow: inset 0 0 0 1.5px var(--color-steel);
+  }
+  .pk-item--done .pk-item-index {
+    color: var(--color-steel);
   }
 
   .pk-item h2 {
@@ -6205,6 +6608,9 @@
   .home-life-image,
   .home-life-image img,
   .home-life-copy,
+  .home-program-image img,
+  .home-hero-inset img,
+  .about-stage img,
   .home-tabs-indicator,
   .home-button svg,
   .home-text-link svg,
@@ -6252,6 +6658,17 @@
   .contact-location-board a svg,
   .collab-chevron {
     transition: none !important;
+  }
+
+  /* Detail proker: zoom hover galeri + transisi tombol lightbox. */
+  .pk-doc-item img,
+  .pk-lightbox-nav,
+  .pk-lightbox-close {
+    transition: none !important;
+  }
+  .pk-doc-item:hover img,
+  .pk-doc-item:focus-visible img {
+    transform: none;
   }
 }
 

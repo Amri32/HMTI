@@ -2,20 +2,40 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { Account } from "appwrite";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getAppwriteClient, isAppwriteConfigured } from "@/lib/appwrite/client";
-import { getAdminAccess } from "@/lib/appwrite/admin";
+import { ADMIN_SESI_EVENT, getAdminAccess } from "@/lib/appwrite/admin";
+import AdminAuthShell from "@/components/admin/AdminAuthShell";
+import AdminRecoveryFlow from "@/components/admin/AdminRecoveryFlow";
 
 // Form login admin: dipakai halaman /admin/login dan guard RequireAdmin
 // (dirender inline di rute admin mana pun saat sesi belum ada).
 export default function AdminLoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [mode, setMode] = useState<"masuk" | "lupa">("masuk");
+  const [tokenDiabaikan, setTokenDiabaikan] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [sibuk, setSibuk] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Tautan reset dari email membawa userId dan secret. Kehadirannya langsung
+  // membuka langkah setel sandi, tanpa perlu klik tambahan.
+  const userId = searchParams.get("userId");
+  const secret = searchParams.get("secret");
+  const token = !tokenDiabaikan && userId && secret ? { userId, secret } : null;
+
+  function kembaliKeMasuk() {
+    setMode("masuk");
+    setTokenDiabaikan(true);
+    // Parameter token dibuang dari address bar supaya alur tidak terbuka lagi
+    // memakai secret yang sudah terpakai.
+    if (window.location.search) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }
 
   async function masuk(e: FormEvent) {
     e.preventDefault();
@@ -54,6 +74,12 @@ export default function AdminLoginForm() {
         setError("Akun ini tidak memiliki akses admin HMTI.");
         return;
       }
+      // Guard hanya memeriksa ulang sesi saat pathname berubah atau saat
+      // event ini dikirim. Dua kasus yang dilayani:
+      // - Login inline di rute admin (pathname sama): event membuat guard
+      //   memeriksa ulang lalu langsung menampilkan panel, tanpa refresh.
+      // - Login di halaman /admin/login: pindah ke /admin lewat router.
+      window.dispatchEvent(new Event(ADMIN_SESI_EVENT));
       router.replace("/admin");
     } catch (error: unknown) {
       const code =
@@ -72,92 +98,74 @@ export default function AdminLoginForm() {
     }
   }
 
+  if (mode === "lupa" || token) {
+    return (
+      <AdminRecoveryFlow token={token} onKembali={kembaliKeMasuk} />
+    );
+  }
+
   return (
-    <div className="admin-login-page">
-      <aside className="admin-login-identity">
-        <Link href="/" className="admin-login-brand">
-          <span className="admin-brand-mark" aria-hidden="true">
-            <Image src="/hmti.png" alt="" width={44} height={44} priority />
-          </span>
-          <span>
-            <span className="admin-login-brand-kicker">Himpunan mahasiswa</span>
-            <span className="admin-login-brand-title">HMTI UBSI Margonda</span>
-          </span>
-        </Link>
-        <div className="admin-login-statement">
-          <p className="admin-login-index">01 / Akses pengurus</p>
-          <h1>Kerja yang rapi dimulai dari ruang yang jelas.</h1>
-          <p>
-            Kelola program kerja, berita, struktur organisasi, dan media HMTI dari satu ruang
-            kerja yang tertib.
-          </p>
+    <AdminAuthShell headingId="login-heading">
+      <Link href="/" className="admin-login-back">
+        Kembali ke situs
+      </Link>
+      <p className="admin-login-eyebrow">Akses terbatas / admin</p>
+      <h2 id="login-heading">Masuk ke panel</h2>
+      <p className="admin-login-description">
+        Gunakan akun pengurus yang sudah terdaftar. Panel ini tidak menyediakan pendaftaran umum.
+      </p>
+
+      <form onSubmit={masuk} className="admin-login-form">
+        <div className="admin-login-field">
+          <label htmlFor="email">Email</label>
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            autoFocus
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="admin-control"
+            placeholder="nama@bsi.ac.id"
+          />
         </div>
-        <div className="admin-login-identity-foot">
-          <span className="admin-signal-line" aria-hidden="true" />
-          <span>Portal HMTI Margonda</span>
+
+        <div className="admin-login-field">
+          <label htmlFor="password">Kata sandi</label>
+          <input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="admin-control"
+            placeholder="Masukkan kata sandi"
+          />
         </div>
-      </aside>
 
-      <section className="admin-login-panel" aria-labelledby="login-heading">
-        <div className="admin-login-panel-inner">
-          <Link href="/" className="admin-login-back">
-            Kembali ke situs
-          </Link>
-          <p className="admin-login-eyebrow">Akses terbatas / admin</p>
-          <h2 id="login-heading">Masuk ke panel</h2>
-          <p className="admin-login-description">
-            Gunakan akun pengurus yang sudah terdaftar. Panel ini tidak menyediakan pendaftaran
-            umum.
+        {error ? (
+          <p role="alert" className="admin-login-error">
+            {error}
           </p>
+        ) : null}
 
-          <form onSubmit={masuk} className="admin-login-form">
-            <div className="admin-login-field">
-              <label htmlFor="email">Email</label>
-              <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                autoFocus
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="admin-control"
-                placeholder="nama@bsi.ac.id"
-              />
-            </div>
+        <button type="submit" disabled={sibuk} className="admin-login-submit">
+          <span>{sibuk ? "Memeriksa akses…" : "Masuk ke ruang kerja"}</span>
+          <span aria-hidden="true">↗</span>
+        </button>
+      </form>
 
-            <div className="admin-login-field">
-              <label htmlFor="password">Kata sandi</label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="admin-control"
-                placeholder="Masukkan kata sandi"
-              />
-            </div>
-
-            {error ? (
-              <p role="alert" className="admin-login-error">
-                {error}
-              </p>
-            ) : null}
-
-            <button type="submit" disabled={sibuk} className="admin-login-submit">
-              <span>{sibuk ? "Memeriksa akses…" : "Masuk ke ruang kerja"}</span>
-              <span aria-hidden="true">↗</span>
-            </button>
-          </form>
-
-          <p className="admin-login-help">
-            Kehilangan akses? Hubungi super admin HMTI melalui{" "}
-            <a href="mailto:hmti.ubsi.margonda@gmail.com">hmti.ubsi.margonda@gmail.com</a>.
-          </p>
-        </div>
-      </section>
-    </div>
+      <div className="admin-login-help">
+        <button type="button" className="admin-login-text-action" onClick={() => setMode("lupa")}>
+          Lupa kata sandi? Kirim tautan reset
+        </button>
+        <p>
+          Belum punya akun pengurus? Ajukan lewat{" "}
+          <a href="mailto:hmti.ubsi.margonda@gmail.com">hmti.ubsi.margonda@gmail.com</a>.
+        </p>
+      </div>
+    </AdminAuthShell>
   );
 }

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import PageHeader from "@/components/PageHeader";
-import PageViewTracker from "@/components/PageViewTracker";
 import VisiMisiContent from "@/components/VisiMisiContent";
 
 export const metadata: Metadata = {
@@ -12,7 +11,6 @@ export const metadata: Metadata = {
 export default function VisionMissionPage() {
   return (
     <div>
-      <PageViewTracker page="/visi-misi" />
       <PageHeader
         eyebrow="Visi dan Misi"
         title="Arah kerja yang bisa diperiksa bersama."

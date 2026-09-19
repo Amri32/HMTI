@@ -12,7 +12,6 @@ import {
   COLL_PAGE_VIEWS,
 } from "@/lib/appwrite/schema";
 import type { PageViewDoc, CollabSignalDoc, CollabMessageDoc } from "@/lib/appwrite/types";
-import { trackPageView } from "@/lib/appwrite/tracking";
 
 /* ---------- Types ---------- */
 
@@ -315,10 +314,6 @@ export default function AdminDashboardPage() {
   const [tanggal, setTanggal] = useState<string | null>(null);
 
   useEffect(() => {
-    trackPageView("/admin");
-  }, []);
-
-  useEffect(() => {
     const raf = requestAnimationFrame(() => {
       setTanggal(
         new Intl.DateTimeFormat("id-ID", {
@@ -336,7 +331,6 @@ export default function AdminDashboardPage() {
     let aktif = true;
     (async () => {
       try {
-        const appwrite = getAppwriteClient();
         const [vDocs, sDocs, pDocs] = await Promise.all([
           fetchViews(7),
           fetchSignals(7),
@@ -361,7 +355,6 @@ export default function AdminDashboardPage() {
   const topPagesData = useMemo(() => topPages(views), [views]);
   const totalViews = views.length;
   const totalSignals = signals.length;
-  const totalKonten = (proposals?.length ?? 0) + signals.length;
   const belumDibaca = proposals?.filter((p) => !p.sudah_dibaca).length ?? 0;
 
   async function handleTandaiDibaca(id: string) {

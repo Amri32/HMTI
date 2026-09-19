@@ -75,11 +75,13 @@ export function HeroPhoto({
   alt,
   sizes,
   priority,
+  caption,
 }: {
   src: string;
   alt: string;
   sizes: string;
   priority?: boolean;
+  caption?: string;
 }) {
   const reduce = useReducedMotion();
   const fine = usePointerFine();
@@ -127,7 +129,7 @@ export function HeroPhoto({
         priority={priority}
         onLoad={() => setLoaded(true)}
       />
-      <figcaption>Foto HMTI</figcaption>
+      {caption ? <figcaption>{caption}</figcaption> : null}
     </figure>
   );
 }

@@ -4,7 +4,6 @@ import StudentLife from "@/components/StudentLife";
 import { MagneticButton } from "@/components/HeroMotion";
 import HomeImages, { ProgramImage } from "@/components/HomeImages";
 import { HomeStats, HomeProgramList } from "@/components/HomeLiveData";
-import PageViewTracker from "@/components/PageViewTracker";
 import { aboutParagraphs, missions, siteProfile, vision } from "./site-content";
 
 function LinkArrow() {
@@ -18,7 +17,6 @@ function LinkArrow() {
 export default function HomePage() {
   return (
     <div className="home-page">
-      <PageViewTracker page="/" />
       <section className="home-hero home-container" aria-labelledby="home-title">
         <div className="home-hero-copy">
           <span aria-hidden="true" className="home-kicker" />

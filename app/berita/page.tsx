@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import NewsCatalog from "@/components/NewsCatalog";
 import { BlurFade } from "@/components/motion/Reveal";
-import PageViewTracker from "@/components/PageViewTracker";
 
 export const metadata: Metadata = {
   title: "Berita | HMTI UBSI Margonda",
@@ -20,15 +20,12 @@ function ArrowIcon() {
 export default function NewsPage() {
   return (
     <div className="news-page">
-      <PageViewTracker page="/berita" />
       <div className="news-container">
-        <div className="news-breadcrumbs" aria-label="Breadcrumb">
-          <span>Beranda</span>
+        <nav className="news-breadcrumbs" aria-label="Breadcrumb">
+          <Link href="/">Beranda</Link>
           <span aria-hidden="true">/</span>
           <strong>Berita & Artikel</strong>
-          <span aria-hidden="true">/</span>
-          <span>Ruang publikasi Margonda</span>
-        </div>
+        </nav>
 
         <div className="news-utility">
           <span>Portal publikasi & arsip HMTI</span>
@@ -37,7 +34,6 @@ export default function NewsPage() {
 
         <section className="news-hero" aria-labelledby="news-title">
           <BlurFade className="news-hero-copy" y={18} blur={4}>
-            <p className="news-kicker">Berita, opini, dan rekam jejak</p>
             <h1 id="news-title">
               Warta terkini, <em>dialektika teknologi,</em> & rekam jejak pengabdian.
             </h1>
@@ -53,8 +49,7 @@ export default function NewsPage() {
 
           <BlurFade className="news-stat-board" y={24} blur={5} delay={0.08}>
             <div className="news-stat-board-top">
-              <span>Statistik jurnalistik</span>
-              <span aria-hidden="true">↗</span>
+              <span>Rubrik terbitan</span>
             </div>
             <div className="news-stat-grid">
               <div>
@@ -75,8 +70,8 @@ export default function NewsPage() {
               </div>
             </div>
             <div className="news-stat-board-foot">
-              <span>Ruang tinjau & kurasi</span>
-              <span>HMTI Margonda</span>
+              <span>Dikelola redaksi HMTI</span>
+              <span>Kampus Margonda</span>
             </div>
           </BlurFade>
         </section>

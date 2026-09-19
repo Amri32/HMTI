@@ -42,6 +42,19 @@ export type ProkerItem = {
   description: string;
   image: string;
   imageAlt: string;
+  // Detail penyelesaian — terisi saat status "Selesai". Kosong = section
+  // terkait tidak dirender di halaman detail.
+  slug: string;
+  completedAt: string | null;
+  startedAt: string | null;
+  eventTime: string | null;
+  location: string | null;
+  mapsUrl: string | null;
+  dresscode: string | null;
+  detailBody: string[];
+  documentation: string[];
+  outcome: string | null;
+  announcementNote: string | null;
 };
 
 export type BeritaItem = {
@@ -76,7 +89,6 @@ export type StrukturDivisi = {
   ikon: string;
   nama: string;
   koordinator: string;
-  nim: string;
   tag: string[];
   tugas: string;
   proker: string[];
@@ -87,10 +99,8 @@ export type StrukturBph = {
   id: string;
   lencanaPeran: string;
   nama: string;
-  nim: string;
   deskripsi: string;
   presidium: string;
-  email: string;
   utama: boolean;
   foto: string | null;
 };
@@ -110,6 +120,7 @@ export type SiteImage = {
 
 export interface ContentRepository {
   getProgramKerja(): Promise<ProkerItem[]>;
+  getProkerBySlug(slug: string): Promise<ProkerItem | null>;
   getBerita(): Promise<BeritaItem[]>;
   getBeritaBySlug(slug: string): Promise<BeritaItem | null>;
   getVisiMisi(): Promise<VisiMisi>;
@@ -122,13 +133,31 @@ export interface ContentRepository {
 class StaticContent implements ContentRepository {
   async getProgramKerja(): Promise<ProkerItem[]> {
     return programKerja.map((p) => ({
-      id: p.name,
+      id: p.slug,
       name: p.name,
       status: p.status,
       description: p.description,
       image: p.previewImage,
       imageAlt: `Preview program kerja ${p.name}`,
+      slug: p.slug,
+      completedAt: p.completedAt ?? null,
+      startedAt: null,
+      eventTime: p.eventTime ?? null,
+      location: p.location ?? null,
+      mapsUrl: p.mapsUrl ?? null,
+      dresscode: p.dresscode ?? null,
+      detailBody: [],
+      documentation: [],
+      outcome: null,
+      announcementNote: null,
     }));
+  }
+
+  // Fallback statis tidak punya detail lebih lanjut: halaman detail tetap
+  // jujur menampilkan yang ada (fakta + deskripsi), tanpa data karangan.
+  async getProkerBySlug(slug: string): Promise<ProkerItem | null> {
+    const proker = await this.getProgramKerja();
+    return proker.find((item) => item.slug === slug) ?? null;
   }
 
   async getBerita(): Promise<BeritaItem[]> {
@@ -169,10 +198,8 @@ class StaticContent implements ContentRepository {
         id: `bph-${i + 1}`,
         lencanaPeran: o.lencanaPeran,
         nama: o.nama,
-        nim: o.nim,
         deskripsi: o.deskripsi,
         presidium: o.presidium,
-        email: o.email,
         utama: o.utama,
         foto: fotoPengurus(o.nama),
       })),
@@ -182,7 +209,6 @@ class StaticContent implements ContentRepository {
         ikon: d.ikon,
         nama: d.nama,
         koordinator: d.koordinator,
-        nim: d.nim,
         tag: [...d.tag],
         tugas: d.tugas,
         proker: [...d.proker],
@@ -259,7 +285,23 @@ class AppwriteContent implements ContentRepository {
       description: p.description,
       image: resolveImageUrl(p.image),
       imageAlt: p.image_alt ?? `Preview program kerja ${p.name}`,
+      slug: p.slug?.trim() || p.$id,
+      completedAt: p.completed_at ?? null,
+      startedAt: p.started_at ?? null,
+      eventTime: p.event_time ?? null,
+      location: p.location ?? null,
+      mapsUrl: p.maps_url ?? null,
+      dresscode: p.dresscode ?? null,
+      detailBody: asStringArray(p.detail_body),
+      documentation: asStringArray(p.documentation).map(resolveImageUrl),
+      outcome: p.outcome ?? null,
+      announcementNote: p.announcement_note ?? null,
     }));
+  }
+
+  async getProkerBySlug(slug: string): Promise<ProkerItem | null> {
+    const proker = await this.getProgramKerja();
+    return proker.find((item) => item.slug === slug) ?? null;
   }
 
   async getBerita(): Promise<BeritaItem[]> {
@@ -328,10 +370,8 @@ class AppwriteContent implements ContentRepository {
           id: m.$id,
           lencanaPeran: m.lencana_peran,
           nama: m.nama,
-          nim: m.nim,
           deskripsi: m.deskripsi,
           presidium: m.presidium,
-          email: m.email,
           utama: m.utama,
           foto,
         });
@@ -349,7 +389,6 @@ class AppwriteContent implements ContentRepository {
       ikon: d.ikon,
       nama: d.nama,
       koordinator: d.koordinator,
-      nim: d.nim,
       tag: asStringArray(d.tag),
       tugas: d.tugas,
       proker: asStringArray(d.proker),

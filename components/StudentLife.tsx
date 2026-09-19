@@ -1,9 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { SlotImageImg, useSiteImage } from "@/components/SlotImage";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useSiteImage } from "@/components/SlotImage";
 
 const lifeThemes = [
   {
@@ -39,20 +38,19 @@ const lifeThemes = [
 ] as const;
 
 // Gambar tiap tab dibaca dari slot Media (repository) — admin mengganti foto
-// lewat panel Media dan perubahan langsung tampil di sini. Fallback: path
-// statis site-content + alt bawaan di atas.
+// lewat panel Media dan perubahan langsung tampil di sini. Selama slot masih
+// diambil dari Appwrite, gambar ditahan (tanpa <img>) supaya foto fallback
+// statis tidak sempat terlihat lalu "berkedip" diganti foto asli; setelah
+// URL final terpasang, foto menyala lembut saat benar-benar selesai dimuat.
 function LifeImage({ slot, altFallback, eager = false }: { slot: string; altFallback: string; eager?: boolean }) {
   const img = useSiteImage(slot);
+  const tahan = img.sedangMemutuskan;
   return (
-    <figure className="home-life-image">
-      <Image
-        src={img.url}
-        alt={img.alt || altFallback}
-        fill
-        sizes="(min-width: 1024px) 58vw, 100vw"
-        priority={eager || undefined}
-      />
-      <figcaption>{img.caption || "Foto HMTI"}</figcaption>
+    <figure className="home-life-image" data-pending={tahan || undefined}>
+      {tahan ? null : (
+        <SlotImageImg image={img} sizes="(min-width: 1024px) 58vw, 100vw" altFallback={altFallback} priority={eager} />
+      )}
+      {img.caption ? <figcaption>{img.caption}</figcaption> : null}
     </figure>
   );
 }

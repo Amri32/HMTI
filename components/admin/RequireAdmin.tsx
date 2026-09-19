@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { Suspense, useCallback, useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { isAppwriteConfigured } from "@/lib/appwrite/client";
-import { getAdminAccess } from "@/lib/appwrite/admin";
+import { ADMIN_SESI_EVENT, getAdminAccess } from "@/lib/appwrite/admin";
 import AdminLoginForm from "@/components/admin/AdminLoginForm";
+import AdminAuthLoading from "@/components/admin/AdminAuthLoading";
 import AdminShell from "@/components/admin/AdminShell";
 
 type State =
@@ -23,7 +24,7 @@ export default function RequireAdmin({ children }: { children: ReactNode }) {
     unconfigured ? { status: "guest" } : { status: "checking" }
   );
 
-  useEffect(() => {
+  const periksa = useCallback(() => {
     if (pathname === "/admin/login" || unconfigured) return;
     let aktif = true;
     getAdminAccess().then((access) => {
@@ -41,6 +42,15 @@ export default function RequireAdmin({ children }: { children: ReactNode }) {
     };
   }, [pathname, unconfigured]);
 
+  useEffect(periksa, [periksa]);
+
+  // Login sukses pada form inline tidak mengubah pathname, jadi guard perlu
+  // dimicu ulang lewat event agar langsung masuk tanpa refresh manual.
+  useEffect(() => {
+    window.addEventListener(ADMIN_SESI_EVENT, periksa);
+    return () => window.removeEventListener(ADMIN_SESI_EVENT, periksa);
+  }, [periksa]);
+
   // Halaman login tidak di-guard oleh shell admin.
   if (pathname === "/admin/login") return <>{children}</>;
 
@@ -57,9 +67,14 @@ export default function RequireAdmin({ children }: { children: ReactNode }) {
     );
   }
 
-  // Guest: form login langsung tampil di rute admin mana pun.
+  // Guest: form login langsung tampil di rute admin mana pun. Suspense
+  // diperlukan karena form itu membaca parameter tautan reset di klien.
   if (state.status === "guest") {
-    return <AdminLoginForm />;
+    return (
+      <Suspense fallback={<AdminAuthLoading />}>
+        <AdminLoginForm />
+      </Suspense>
+    );
   }
 
   if (state.status === "forbidden") {
