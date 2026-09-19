@@ -1,27 +1,24 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Inter } from "next/font/google";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import { Newsreader, Instrument_Sans } from "next/font/google";
+import SiteChrome from "@/components/SiteChrome";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const newsreader = Newsreader({
+  variable: "--font-newsreader",
   subsets: ["latin"],
+  style: ["normal", "italic"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const instrumentSans = Instrument_Sans({
+  variable: "--font-instrument-sans",
   subsets: ["latin"],
-});
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "HMTI Margonda",
-  description: "Himpunan Mahasiswa Teknologi Informasi — Universitas Bina Sarana Informatika Kampus Margonda",
+  title: "HMTI UBSI Margonda | Himpunan Mahasiswa Teknologi Informasi",
+  description:
+    "Website Himpunan Mahasiswa Teknologi Informasi Universitas Bina Sarana Informatika Kampus Margonda.",
 };
 
 export default function RootLayout({
@@ -30,13 +27,20 @@ export default function RootLayout({
   return (
     <html
       lang="id"
-      className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} scroll-smooth`}
+      className={`${newsreader.variable} ${instrumentSans.variable} scroll-smooth`}
     >
-      <body className="min-h-screen flex flex-col font-inter">
-        <Navbar />
-        <main className="flex-1">{children}</main>
-        <Footer />
+      <body className="flex min-h-screen flex-col bg-canvas font-sans text-ink antialiased">
+        <a
+          href="#main-content"
+          className="sr-only z-[100] bg-ink px-4 py-3 text-white focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
+        >
+          Lewati ke konten utama
+        </a>
+        <SiteChrome>
+          {children}
+        </SiteChrome>
       </body>
     </html>
   );
 }
+
