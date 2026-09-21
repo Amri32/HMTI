@@ -4,7 +4,7 @@
 //  storage.write, teams.write)
 //
 // Yang dilakukan:
-//   1. Database `hmti` + 8 koleksi + atribut + index unik
+//   1. Database `hmti` + 12 koleksi + atribut + index unik
 //   2. Bucket `hmti-media` (baca publik, tulis hanya team admin)
 //   3. Team `admin` + undangan super admin (email invite dikirim)
 //   4. Seed konten terverifikasi (proker, berita, visi-misi, struktur, site_images)
@@ -87,9 +87,23 @@ const ADMIN_PERMS = [`read("${ADMIN}")`, `write("${ADMIN}")`];
 // Koleksi tracking: admin untuk baca & kelola, tapi SIAPA PUN boleh membuat
 // dokumen (create di level koleksi) agar tracking dari pengunjung anonim
 // tidak ditolak — inilah sebabnya dashboard analytics pernah selalu kosong.
+//
+// ⚠️ Risiko yang DITERIMA secenggang: create("any") berarti penyerang bisa
+// menulis dokumen palsu (memalsukan statistik / mengisi kuota). Untuk situs
+// HMTI ini diterima karena: datanya hanya statistik internal, nilainya tidak
+// dipercaya untuk keputusan apa pun, dan tidak ada PII. Kalau abuse nyata
+// terjadi, pindahkan penulisan tracking ke Appwrite Function dengan rate
+// limit — lalu lepas create("any") dari sini.
 const TRACKING_PERMS = [`read("${ADMIN}")`, `write("${ADMIN}")`, 'create("any")'];
 // Proposal kolaborasi: sama dengan tracking — pengunjung mengirim tanpa login,
 // hanya admin yang bisa membaca & menandai sudah dibaca.
+//
+// ⚠️ Risiko yang DITERIMA secenggang: create("any") tanpa endpoint perantara
+// berarti bot bisa menulis row sebanyak apa pun (spam panel + memicu fungsi
+// email). Mitigasi yang sudah dipasang di sisi klien: honeypot + throttle
+// di CollaborationForm.tsx; di sisi fungsi: guard trigger event (main.js).
+// Penguatan ideal berikutnya: challenge (mis. Turnstile) yang diverifikasi
+// fungsi, atau endpoint perantara dengan rate limit per IP.
 const PENGAJUAN_PERMS = [`read("${ADMIN}")`, `write("${ADMIN}")`, 'create("any")'];
 
 const KOLEKSI = [
@@ -206,6 +220,18 @@ const KOLEKSI = [
     indexes: [{ key: "uniq_key", type: "unique", attributes: ["key"] }],
   },
   {
+    // Pasangan kunci-nilai untuk pengaturan situs publik (mis. handle Instagram
+    // yang diubah admin lewat panel Pengaturan dan tampil di footer situs).
+    id: "site_settings",
+    name: "Pengaturan Situs",
+    permissions: PUBLIC_PERMS,
+    attributes: [
+      ["key", "string", { size: 64, required: true }],
+      ["value", "string", { size: 512 }],
+    ],
+    indexes: [{ key: "uniq_key", type: "unique", attributes: ["key"] }],
+  },
+  {
     id: "media_library",
     name: "Pustaka Media",
     permissions: PUBLIC_PERMS,
@@ -244,8 +270,14 @@ const KOLEKSI = [
       ["screen_w", "integer", {}],
       ["screen_h", "integer", {}],
       ["session_id", "string", { size: 64 }],
+      // Identitas perangkat (localStorage, permanen). Dasar hitungan "berapa
+      // device berbeda" — bukan jumlah halaman yang dibuka satu perangkat.
+      ["visitor_id", "string", { size: 64 }],
     ],
-    indexes: [{ key: "idx_page_created", type: "key", attributes: ["page", "$createdAt"] }],
+    indexes: [
+      { key: "idx_page_created", type: "key", attributes: ["page", "$createdAt"] },
+      { key: "idx_visitor_created", type: "key", attributes: ["visitor_id", "$createdAt"] },
+    ],
   },
   {
     id: "collab_signals",
@@ -268,6 +300,16 @@ const KOLEKSI = [
       ["jenis", "string", { size: 64, required: true }],
       ["pesan", "string", { size: 4096, required: true }],
       ["sudah_dibaca", "boolean", { required: true }],
+      // Status tindak lanjut yang juga ditampilkan di laporan pengaju:
+      // baru → dibaca → ditindaklanjuti. Dokumen lama boleh kosong (dibaca
+      // sebagai "baru"/"dibaca" dari sudah_dibaca di panel).
+      // Default "baru" penting: form pengunjung sengaja TIDAK mengirim field
+      // status (tidak boleh dikendalikan klien) — tabel yang memberi nilai
+      // awalnya.
+      ["status", "string", { size: 24, default: "baru" }],
+      // Catatan internal pengurus. Hanya admin yang bisa membaca koleksi ini,
+      // jadi isinya tidak pernah sampai ke pengaju.
+      ["catatan", "string", { size: 2048 }],
     ],
     indexes: [{ key: "idx_dibaca_created", type: "key", attributes: ["sudah_dibaca", "$createdAt"] }],
   },
@@ -714,6 +756,51 @@ async function main() {
     } catch (e) {
       console.log(`  ! purge ${koleksi}.${key} gagal: ${e.message}`);
       console.log(`    Hapus manual di Console: Databases â†’ hmti â†’ ${koleksi} â†’ Attributes â†’ ${key}`);
+    }
+  }
+
+  // 1d. Sinkronkan default atribut status pengajuan pada project yang SUDAH
+  // ADA. Form pengunjung tidak mengirim field status lagi, jadi baris lama
+  // (atribut tanpa default) harus diberi default "baru" — kalau tidak,
+  // createRow dari form akan ditolak karena status kosong.
+  {
+    try {
+      const attrs = (await api("GET", `/databases/hmti/collections/collab_messages/attributes`))?.attributes ?? [];
+      const statusAttr = attrs.find((a) => a.key === "status");
+      if (!statusAttr) {
+        console.log("  ! atribut status collab_messages tidak ditemukan");
+      } else if (statusAttr.default === "baru") {
+        console.log(`  ✓ default status collab_messages sudah "baru"`);
+      } else {
+        let ok = false;
+        for (const path of [
+          `/databases/hmti/collections/collab_messages/attributes/string/status`,
+          `/tablesdb/hmti/tables/collab_messages/columns/string/status`,
+        ]) {
+          const res = await fetch(`${ENDPOINT}${path}`, {
+            method: "PATCH",
+            headers: H,
+            // Appwrite 2.x mewajibkan `required` (dan `size` untuk string)
+            // saat update atribut — tidak boleh dikirim default-nya saja.
+            body: JSON.stringify({ required: false, size: 24, default: "baru" }),
+          });
+          const text = await res.text();
+          if (res.ok) {
+            ok = true;
+            break;
+          }
+          // Lanjut ke path berikutnya apa pun bentuk gagalnya (HTML = route
+          // tidak ada di deployment ini; JSON = versi route berbeda).
+          console.log(`  ! PATCH ${path} → ${res.status}: ${text.slice(0, 160)}`);
+        }
+        if (ok) console.log(`  ✓ default status collab_messages = "baru"`);
+        else {
+          console.log(`  ! PATCH default status tidak tersedia via API — atur manual di Console:`);
+          console.log(`    Databases → hmti → collab_messages → Attributes → status → Default = baru`);
+        }
+      }
+    } catch (e) {
+      console.log(`  ! default status: ${e.message}`);
     }
   }
 

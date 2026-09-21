@@ -3,7 +3,7 @@
 import Image from "next/image";
 import CollaborationForm from "@/components/CollaborationForm";
 import ContactSignal from "@/components/motion/ContactSignal";
-import { aboutAddress, contactEmail, siteProfile } from "../site-content";
+import { contactEmail, siteProfile } from "../site-content";
 import { trackCollabSignal } from "@/lib/appwrite/tracking";
 
 function ArrowDown() {
@@ -83,9 +83,14 @@ export default function ContactPage() {
       <section className="contact-location" aria-labelledby="location-title">
         <div className="contact-shell contact-location-grid">
           <div className="contact-location-copy">
+            <span className="contact-identity-rule" aria-hidden="true" />
             <p className="contact-kicker">Lokasi sekretariat</p>
             <h2 id="location-title">Datang dan temui kami di kampus.</h2>
-            <p>{aboutAddress}</p>
+            <p>
+              Sekretariat HMTI berada di lingkungan kampus UBSI Margonda. Kami terbuka untuk
+              kunjungan organisasi, pengumpulan surat, dan koordinasi kegiatan pada jam
+              perkuliahan.
+            </p>
           </div>
           <div className="contact-location-board">
             <p className="contact-location-label">Alamat sekretariat</p>
@@ -104,7 +109,7 @@ export default function ContactPage() {
             <p className="contact-kicker">Ruang kolaborasi</p>
             <h2 id="proposal-title">Ajukan kerja sama yang jelas sejak awal.</h2>
             <p>
-              Isi identitas, jenis kolaborasi, dan ringkasan rencana. Form akan menyiapkan draf di aplikasi email Anda.
+              Isi identitas, jenis kolaborasi, dan ringkasan rencana. Pesan langsung tersimpan di panel admin HMTI, lalu draf email disiapkan bila ingin Anda tembuskan.
             </p>
             <a className="contact-inline-email" href={`mailto:${contactEmail}`}>
               {contactEmail}
@@ -114,7 +119,7 @@ export default function ContactPage() {
           <div className="contact-form-frame">
             <div className="contact-form-heading">
               <p>Form proposal</p>
-              <span>Dibuka melalui aplikasi email</span>
+              <span>Tersimpan di panel admin</span>
             </div>
             <CollaborationForm />
           </div>

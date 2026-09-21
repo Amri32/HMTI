@@ -10,22 +10,28 @@ import { getAppwriteClient } from "@/lib/appwrite/client";
 // Ikon digambar khusus untuk tiap modul (stroke 1.5, grid 24), bukan set library.
 const IKON = {
   dashboard: "M4 4h7v9H4zM4 17h7v3H4zM13 4h7v5h-7zM13 13h7v7h-7z",
+  kolaborasi: "M4 6h16v12H4zM4 7.5l8 6 8-6",
   proker: "M4 5h16M4 12h16M4 19h10M7 3v4M17 3v4",
   berita: "M5 4h14v16H5zM8 8h8M8 12h8M8 16h5",
   struktur: "M12 4v4M12 8H6v4M12 8h6v4M4 16h4v4H4zM10 16h4v4h-4zM16 16h4v4h-4z",
   visi: "M12 5c5 0 8 4.5 9 7-1 2.5-4 7-9 7S4 14.5 3 12c1-2.5 4-7 9-7zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
   media: "M4 5h16v14H4zM4 15l4-4 4 4 3-3 5 5M9 9.5a1.5 1.5 0 1 0 0 .01",
   aktivitas: "M4 12h4l2-6 4 12 2-6h4",
+  pengaturan: "M4 7h6M14 7h6M4 17h10M18 17h2M12 4v6M16 14v6",
 } as const;
 
 export const MODUL: { href: string; label: string; ikon: keyof typeof IKON }[] = [
   { href: "/admin", label: "Dashboard", ikon: "dashboard" },
+  // Kotak masuk pengajuan: diletakkan tepat setelah dashboard karena ini yang
+  // paling sering dibuka pengurus.
+  { href: "/admin/kolaborasi", label: "Laporan Kolaborasi", ikon: "kolaborasi" },
   { href: "/admin/proker", label: "Program Kerja", ikon: "proker" },
   { href: "/admin/berita", label: "Berita", ikon: "berita" },
   { href: "/admin/struktur", label: "Struktur", ikon: "struktur" },
   { href: "/admin/visi-misi", label: "Visi & Misi", ikon: "visi" },
   { href: "/admin/media", label: "Media", ikon: "media" },
   { href: "/admin/aktivitas", label: "Log Aktivitas", ikon: "aktivitas" },
+  { href: "/admin/pengaturan", label: "Pengaturan", ikon: "pengaturan" },
 ];
 
 function NavIcon({ path }: { path: string }) {

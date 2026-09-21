@@ -15,14 +15,49 @@ function getDeviceType(): PageViewDoc["device_type"] {
   return "desktop";
 }
 
-function getSessionId(): string {
-  if (typeof sessionStorage === "undefined") return "unknown";
-  let sid = sessionStorage.getItem("hmti_sid");
-  if (!sid) {
-    sid = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-    sessionStorage.setItem("hmti_sid", sid);
+function idAcak(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID().replace(/-/g, "");
   }
-  return sid;
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+}
+
+// Satu sesi buka situs = satu kunjungan. sessionStorage hilang saat tab ditutup.
+// Null berarti browser menolak storage: biar dashboard yang memutuskan
+// fallback-nya, jangan mengarang id palsu yang menyatukan semua pengunjung.
+function getSessionId(): string | null {
+  if (typeof sessionStorage === "undefined") return null;
+  try {
+    let sid = sessionStorage.getItem("hmti_sid");
+    if (!sid) {
+      sid = idAcak();
+      sessionStorage.setItem("hmti_sid", sid);
+    }
+    return sid;
+  } catch {
+    return null;
+  }
+}
+
+// Identitas perangkat: dibuat sekali per browser lalu disimpan permanen di
+// localStorage. Inilah yang membuat "berapa device berbeda" bisa dihitung —
+// satu perangkat yang membuka 10 halaman, atau kembali minggu depan, tetap
+// satu perangkat. Tidak ada IP yang disimpan.
+function getVisitorId(): string | null {
+  if (typeof localStorage === "undefined") return null;
+  try {
+    let vid = localStorage.getItem("hmti_vid");
+    if (!vid) {
+      vid = idAcak();
+      localStorage.setItem("hmti_vid", vid);
+    }
+    return vid;
+  } catch {
+    // localStorage bisa diblokir (mode privat/kebijakan browser). Catatan tetap
+    // dikirim tanpa visitor_id, dan dashboard jatuh ke session_id untuk
+    // catatan itu alih-alih menyatukan semua orang jadi satu "perangkat".
+    return null;
+  }
 }
 
 export async function trackPageView(page: string): Promise<void> {
@@ -40,6 +75,7 @@ export async function trackPageView(page: string): Promise<void> {
         screen_w: typeof screen !== "undefined" ? screen.width : null,
         screen_h: typeof screen !== "undefined" ? screen.height : null,
         session_id: getSessionId(),
+        visitor_id: getVisitorId(),
       }
     );
   } catch {

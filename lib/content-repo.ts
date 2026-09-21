@@ -11,6 +11,7 @@ import {
   COLL_BERITA,
   COLL_PROKER,
   COLL_SITE_IMAGES,
+  COLL_SITE_SETTINGS,
   COLL_STRUKTUR_DIVISI,
   COLL_STRUKTUR_MEMBERS,
   COLL_VISI_MISI,
@@ -19,16 +20,19 @@ import type {
   BeritaDoc,
   ProkerDoc,
   SiteImageDoc,
+  SiteSettingDoc,
   StrukturDivisiDoc,
   StrukturMemberDoc,
   VisiMisiDoc,
 } from "./appwrite/types";
 import { fotoPengurus } from "./struktur-pengurus";
+import { instagramUrl, normalizeInstagramHandle, type SocialPlatform } from "./social";
 import {
   missions,
   newsCatalog,
   programKerja,
   siteImageSlots,
+  socialHandles,
   strukturData,
   vision,
 } from "@/app/site-content";
@@ -118,6 +122,19 @@ export type SiteImage = {
   caption: string;
 };
 
+// Kanal sosial resmi yang sudah layak tampil — hanya kanal dengan handle valid
+// yang masuk daftar, jadi ikon tanpa tujuan tidak pernah dirender.
+export type SocialLink = {
+  platform: SocialPlatform;
+  handle: string;
+  url: string;
+};
+
+function tautanSosial(instagram: string | null | undefined): SocialLink[] {
+  const handle = normalizeInstagramHandle(instagram);
+  return handle ? [{ platform: "instagram", handle, url: instagramUrl(handle) }] : [];
+}
+
 export interface ContentRepository {
   getProgramKerja(): Promise<ProkerItem[]>;
   getProkerBySlug(slug: string): Promise<ProkerItem | null>;
@@ -126,6 +143,7 @@ export interface ContentRepository {
   getVisiMisi(): Promise<VisiMisi>;
   getStruktur(): Promise<StrukturData>;
   getSiteImages(): Promise<Record<string, SiteImage>>;
+  getSocialLinks(): Promise<SocialLink[]>;
 }
 
 // ── Implementasi statis (fallback tanpa Appwrite) ─────────────────────────
@@ -219,6 +237,10 @@ class StaticContent implements ContentRepository {
         })),
       })),
     };
+  }
+
+  async getSocialLinks(): Promise<SocialLink[]> {
+    return tautanSosial(socialHandles.instagram);
   }
 
   async getSiteImages(): Promise<Record<string, SiteImage>> {
@@ -396,6 +418,26 @@ class AppwriteContent implements ContentRepository {
     }));
 
     return { periode, bph, divisi };
+  }
+
+  async getSocialLinks(): Promise<SocialLink[]> {
+    // Pengaturan sosial bersifat opsional. Koleksi site_settings bisa belum ada
+    // (project yang belum menjalankan ulang scripts/appwrite-setup.mjs) atau
+    // belum punya barisnya, dan permintaan itu bisa gagal. Kegagalan seperti itu
+    // tidak boleh menyembunyikan kanal resmi organisasi, jadi jatuh ke handle
+    // bawaan di site-content.ts. Baris yang ada tapi dikosongkan admin tetap
+    // dihormati sebagai "ikon sengaja disembunyikan".
+    try {
+      const res = await this.databases.listDocuments<SiteSettingDoc>(
+        APPWRITE_DATABASE_ID,
+        COLL_SITE_SETTINGS,
+        [Query.limit(100)]
+      );
+      const barisInstagram = res.documents.find((d) => d.key === "instagram");
+      return tautanSosial(barisInstagram ? barisInstagram.value : socialHandles.instagram);
+    } catch {
+      return tautanSosial(socialHandles.instagram);
+    }
   }
 
   async getSiteImages(): Promise<Record<string, SiteImage>> {

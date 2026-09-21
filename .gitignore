@@ -54,6 +54,10 @@ __pycache__/
 # zip sumber foto pengurus (isi sudah diekstrak ke public/pengurus/)
 public/PENGURUS HMTI.zip
 
+# artefak deploy fungsi Appwrite (buat ulang lewat perintah di README fungsi)
+code.tar.gz
+code-appwrite.tar.gz
+
 # artefak kerja lokal (screenshot audit, script cek CDP, brief)
 .impeccable/
 

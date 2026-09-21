@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Databases, Query } from "appwrite";
+import type { Models } from "appwrite";
 import { motion, useReducedMotion } from "motion/react";
 import { getAppwriteClient } from "@/lib/appwrite/client";
 import {
@@ -12,105 +13,83 @@ import {
   COLL_PAGE_VIEWS,
 } from "@/lib/appwrite/schema";
 import type { PageViewDoc, CollabSignalDoc, CollabMessageDoc } from "@/lib/appwrite/types";
-
-/* ---------- Types ---------- */
-
-type ViewPoint = { date: string; count: number };
+import {
+  halamanTerpopuler,
+  jumlahKunjungan,
+  jumlahPerangkatUnik,
+  kunjunganHarian,
+  sebaranPerangkat,
+  type TitikHarian,
+} from "@/lib/analytics";
+// Status tindak lanjut dan catatan pengajuan dikelola di modul tersendiri
+// (/admin/kolaborasi); dashboard hanya menampilkan jumlahnya lalu menautkannya.
+import { normalisasiStatus } from "@/lib/kolaborasi";
 
 /* ---------- Data fetchers ---------- */
 
-async function fetchViews(days: number): Promise<PageViewDoc[]> {
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - days);
-  const res = await new Databases(getAppwriteClient()).listDocuments<PageViewDoc>(
-    APPWRITE_DATABASE_ID,
-    COLL_PAGE_VIEWS,
-    [Query.greaterThanEqual("$createdAt", cutoff.toISOString()), Query.limit(5000)]
-  );
-  return res.documents;
+// Appwrite membatasi satu listDocuments maksimal 100 dokumen per permintaan —
+// limit yang lebih besar dari itu diam-diam dipotong jadi 100. Karena itu data
+// diambil per halaman sampai total habis (atau batas pengaman tercapai), dan
+// total sebenarnya ikut dikembalikan supaya angka dashboard tidak pernah
+// menyamar sebagai jumlah utuh padahal terpotong.
+const BATAS_HALAMAN = 10; // pengaman: 10 × 100 = 1.000 catatan terbaru
+
+type HasilList<T> = { dokumen: T[]; total: number };
+
+async function listBertahap<T extends Models.Document>(
+  collectionId: string,
+  queries: string[],
+  batasHalaman = BATAS_HALAMAN
+): Promise<HasilList<T>> {
+  const db = new Databases(getAppwriteClient());
+  const dokumen: T[] = [];
+  let total = 0;
+  for (let halaman = 0; halaman < batasHalaman; halaman += 1) {
+    const res = await db.listDocuments<T>(APPWRITE_DATABASE_ID, collectionId, [
+      ...queries,
+      Query.limit(100),
+      Query.offset(halaman * 100),
+    ]);
+    total = res.total;
+    dokumen.push(...res.documents);
+    if (res.documents.length === 0 || dokumen.length >= total) break;
+  }
+  return { dokumen, total };
 }
 
-async function fetchSignals(days: number): Promise<CollabSignalDoc[]> {
+// Urutan naik per $createdAt membuat halaman tetap stabil walau ada kunjungan
+// baru masuk di tengah pengambilan: baris baru menempel di ujung, bukan
+// menggeser isi halaman sebelumnya.
+async function fetchViews(days: number): Promise<HasilList<PageViewDoc>> {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
-  const res = await new Databases(getAppwriteClient()).listDocuments<CollabSignalDoc>(
-    APPWRITE_DATABASE_ID,
-    COLL_COLLAB_SIGNALS,
-    [Query.greaterThanEqual("$createdAt", cutoff.toISOString()), Query.limit(1000)]
-  );
-  return res.documents;
+  return listBertahap<PageViewDoc>(COLL_PAGE_VIEWS, [
+    Query.greaterThanEqual("$createdAt", cutoff.toISOString()),
+    Query.orderAsc("$createdAt"),
+  ]);
+}
+
+async function fetchSignals(days: number): Promise<HasilList<CollabSignalDoc>> {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  return listBertahap<CollabSignalDoc>(COLL_COLLAB_SIGNALS, [
+    Query.greaterThanEqual("$createdAt", cutoff.toISOString()),
+    Query.orderAsc("$createdAt"),
+  ]);
 }
 
 // Proposal kolaborasi dari form /kontak — terbaru dulu, tandai belum dibaca.
-async function fetchProposals(): Promise<CollabMessageDoc[]> {
-  const res = await new Databases(getAppwriteClient()).listDocuments<CollabMessageDoc>(
-    APPWRITE_DATABASE_ID,
-    COLL_COLLAB_MESSAGES,
-    [Query.orderDesc("$createdAt"), Query.limit(25)]
-  );
-  return res.documents;
-}
-
-// Tandai satu proposal sudah dibaca (write team:admin).
-async function tandaiDibaca(id: string): Promise<void> {
-  await new Databases(getAppwriteClient()).updateDocument(
-    APPWRITE_DATABASE_ID,
-    COLL_COLLAB_MESSAGES,
-    id,
-    { sudah_dibaca: true }
-  );
-}
-
-/* ---------- Helpers ---------- */
-
-function groupByDay(docs: { $createdAt: string }[]): ViewPoint[] {
-  const map = new Map<string, number>();
-  for (const d of docs) {
-    const day = d.$createdAt.slice(0, 10);
-    map.set(day, (map.get(day) ?? 0) + 1);
-  }
-  const out: ViewPoint[] = [];
-  const now = new Date();
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    out.push({ date: key, count: map.get(key) ?? 0 });
-  }
-  return out;
-}
-
-function deviceBreakdown(docs: PageViewDoc[]): { label: string; value: number }[] {
-  const map = new Map<string, number>();
-  for (const d of docs) {
-    map.set(d.device_type, (map.get(d.device_type) ?? 0) + 1);
-  }
-  return [
-    { label: "Desktop", value: map.get("desktop") ?? 0 },
-    { label: "Mobile", value: map.get("mobile") ?? 0 },
-    { label: "Tablet", value: map.get("tablet") ?? 0 },
-  ].filter((d) => d.value > 0);
-}
-
-function uniqueSessions(docs: PageViewDoc[]): number {
-  const set = new Set(docs.map((d) => d.session_id).filter(Boolean));
-  return set.size;
-}
-
-function topPages(docs: PageViewDoc[]): { page: string; count: number }[] {
-  const map = new Map<string, number>();
-  for (const d of docs) {
-    map.set(d.page, (map.get(d.page) ?? 0) + 1);
-  }
-  return Array.from(map.entries())
-    .map(([page, count]) => ({ page, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
+async function fetchProposals(): Promise<HasilList<CollabMessageDoc>> {
+  return listBertahap<CollabMessageDoc>(COLL_COLLAB_MESSAGES, [Query.orderDesc("$createdAt")], 5);
 }
 
 /* ---------- Charts (SVG, no lib) ---------- */
 
-function LineChart({ data, height = 180 }: { data: ViewPoint[]; height?: number }) {
+// Semua angka di bawah dihitung dari identitas perangkat/sesi di
+// lib/analytics.ts — satu perangkat yang membuka banyak halaman tidak lagi
+// terlihat sebagai banyak pengunjung.
+
+function LineChart({ data, height = 180 }: { data: TitikHarian[]; height?: number }) {
   const max = Math.max(...data.map((d) => d.count), 1);
   const w = 100 / Math.max(data.length - 1, 1);
   const points = data.map((d, i) => `${i * w},${100 - (d.count / max) * 85}`).join(" ");
@@ -310,8 +289,17 @@ export default function AdminDashboardPage() {
   const [views, setViews] = useState<PageViewDoc[]>([]);
   const [signals, setSignals] = useState<CollabSignalDoc[]>([]);
   const [proposals, setProposals] = useState<CollabMessageDoc[] | null>(null);
+  // Total sebenarnya dari Appwrite (res.total) — bisa lebih besar dari array
+  // yang termuat bila data melebihi batas halaman pada fetchers di atas.
+  const [totalViews, setTotalViews] = useState(0);
+  const [totalSignals, setTotalSignals] = useState(0);
+  const [totalProposals, setTotalProposals] = useState(0);
   const [gagal, setGagal] = useState(false);
   const [tanggal, setTanggal] = useState<string | null>(null);
+  const [mereset, setMereset] = useState(false);
+  const [jumlahDihapus, setJumlahDihapus] = useState<number | null>(null);
+  const [resetInfo, setResetInfo] = useState<string | null>(null);
+  const [resetGagal, setResetGagal] = useState(false);
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => {
@@ -331,15 +319,18 @@ export default function AdminDashboardPage() {
     let aktif = true;
     (async () => {
       try {
-        const [vDocs, sDocs, pDocs] = await Promise.all([
+        const [vHasil, sHasil, pHasil] = await Promise.all([
           fetchViews(7),
           fetchSignals(7),
-          fetchProposals().catch(() => [] as CollabMessageDoc[]),
+          fetchProposals().catch(() => ({ dokumen: [] as CollabMessageDoc[], total: 0 })),
         ]);
         if (!aktif) return;
-        setViews(vDocs);
-        setSignals(sDocs);
-        setProposals(pDocs);
+        setViews(vHasil.dokumen);
+        setTotalViews(vHasil.total);
+        setSignals(sHasil.dokumen);
+        setTotalSignals(sHasil.total);
+        setProposals(pHasil.dokumen);
+        setTotalProposals(pHasil.total);
       } catch {
         if (aktif) setGagal(true);
       }
@@ -349,22 +340,58 @@ export default function AdminDashboardPage() {
     };
   }, []);
 
-  const viewSeries = useMemo(() => groupByDay(views), [views]);
-  const deviceData = useMemo(() => deviceBreakdown(views), [views]);
-  const uniqueVisitors = useMemo(() => uniqueSessions(views), [views]);
-  const topPagesData = useMemo(() => topPages(views), [views]);
-  const totalViews = views.length;
-  const totalSignals = signals.length;
-  const belumDibaca = proposals?.filter((p) => !p.sudah_dibaca).length ?? 0;
+  // Semua turunan di bawah memakai identitas perangkat/sesi, bukan jumlah
+  // catatan halaman — satu desktop yang membuka 30 halaman tetap 1 perangkat.
+  const viewSeries = useMemo(() => kunjunganHarian(views), [views]);
+  const deviceData = useMemo(() => sebaranPerangkat(views), [views]);
+  const totalPerangkat = useMemo(() => jumlahPerangkatUnik(views), [views]);
+  const totalKunjungan = useMemo(() => jumlahKunjungan(views), [views]);
+  const topPagesData = useMemo(() => halamanTerpopuler(views), [views]);
+  const totalSinyalTermuat = signals.length;
+  // Sebagian data tidak termuat bila melebihi batas pengambilan — angka ini
+  // hanya dipakai untuk memilih catatan kejujuran di UI, bukan untuk hitungan.
+  const terpotong =
+    totalViews > views.length ||
+    totalSignals > totalSinyalTermuat ||
+    totalProposals > (proposals?.length ?? 0);
+  const belumDibaca =
+    proposals?.filter((p) => normalisasiStatus(p.status, p.sudah_dibaca) === "baru").length ?? 0;
+  // Berapa halaman yang dibuka satu perangkat: konteks kenapa angkanya beda
+  // dengan total kunjungan.
+  const halamanPerPerangkat = totalPerangkat ? (views.length / totalPerangkat).toFixed(1) : "0";
 
-  async function handleTandaiDibaca(id: string) {
-    // Optimistic: UI langsung update, rollback bila gagal.
-    const sebelum = proposals;
-    setProposals((p) => p?.map((x) => (x.$id === id ? { ...x, sudah_dibaca: true } : x)) ?? null);
+  // Atur ulang data kunjungan: hapus catatan lama yang belum punya identitas
+  // perangkat, supaya dashboard dihitung dari nol dengan aturan baru.
+  async function handleResetKunjungan() {
+    if (mereset) return;
+    if (!window.confirm("Hapus semua catatan kunjungan? Angka dashboard akan dihitung ulang dari nol.")) {
+      return;
+    }
+    setMereset(true);
+    setResetGagal(false);
+    setResetInfo(null);
+    setJumlahDihapus(0);
+    const db = new Databases(getAppwriteClient());
+    let dihapus = 0;
     try {
-      await tandaiDibaca(id);
+      // Appwrite tidak punya hapus massal: ambil per 100 lalu hapus satu-satu.
+      for (;;) {
+        const res = await db.listDocuments<PageViewDoc>(APPWRITE_DATABASE_ID, COLL_PAGE_VIEWS, [
+          Query.limit(100),
+        ]);
+        if (res.documents.length === 0) break;
+        for (const doc of res.documents) {
+          await db.deleteDocument(APPWRITE_DATABASE_ID, COLL_PAGE_VIEWS, doc.$id);
+          dihapus += 1;
+        }
+        setJumlahDihapus(dihapus);
+      }
+      setViews([]);
+      setResetInfo(`${dihapus} catatan kunjungan lama dihapus. Angka baru mulai dari kunjungan berikutnya.`);
     } catch {
-      setProposals(sebelum);
+      setResetGagal(true);
+    } finally {
+      setMereset(false);
     }
   }
 
@@ -401,18 +428,24 @@ export default function AdminDashboardPage() {
         <>
           {/* Stat cards */}
           <motion.section className="dash-stats" aria-label="Statistik utama" {...masuk(1)}>
-            <StatCard label="Total kunjungan" value={totalViews} sub="7 hari terakhir" delay={0} />
-            <StatCard label="Perangkat unik" value={uniqueVisitors} sub="berdasarkan sesi" delay={1} />
+            <StatCard label="Total kunjungan" value={totalPerangkat} sub="perangkat berbeda · 7 hari" delay={0} />
+            <StatCard label="Sesi kunjungan" value={totalKunjungan} sub="buka ulang dihitung baru" delay={1} />
             <StatCard label="Sinyal kolaborasi" value={totalSignals} sub="klik / form kontak" delay={2} />
-            <StatCard label="Proposal masuk" value={proposals?.length ?? 0} sub={`${belumDibaca} belum dibaca`} delay={3} />
+            <StatCard label="Proposal masuk" value={totalProposals} sub={`${belumDibaca} berstatus baru`} delay={3} />
           </motion.section>
+          {terpotong ? (
+            <p className="dash-panel-sub" role="status">
+              Data melebihi batas pemuatan — kartu di atas memakai total sebenarnya dari Appwrite,
+              sedangkan grafik dihitung dari catatan yang berhasil dimuat.
+            </p>
+          ) : null}
 
           {/* Charts row */}
           <motion.section className="dash-analytics" aria-label="Analitik" {...masuk(2)}>
             <div className="dash-panel dash-panel--chart">
               <div className="dash-panel-head">
                 <h2>Kunjungan harian</h2>
-                <span className="dash-panel-sub">7 hari terakhir</span>
+                <span className="dash-panel-sub">perangkat berbeda per hari</span>
               </div>
               <LineChart data={viewSeries} />
             </div>
@@ -420,7 +453,7 @@ export default function AdminDashboardPage() {
             <div className="dash-panel">
               <div className="dash-panel-head">
                 <h2>Perangkat</h2>
-                <span className="dash-panel-sub">distribusi sesi</span>
+                <span className="dash-panel-sub">perangkat unik per jenis</span>
               </div>
               {deviceData.length > 0 ? (
                 <DonutChart data={deviceData} />
@@ -435,7 +468,7 @@ export default function AdminDashboardPage() {
             <div className="dash-panel">
               <div className="dash-panel-head">
                 <h2>Halaman terpopuler</h2>
-                <span className="dash-panel-sub">7 hari terakhir</span>
+                <span className="dash-panel-sub">kunjungan unik per halaman</span>
               </div>
               {topPagesData.length > 0 ? (
                 <BarChart data={topPagesData.map((p) => ({ label: p.page, value: p.count }))} />
@@ -470,60 +503,71 @@ export default function AdminDashboardPage() {
             </div>
           </motion.section>
 
-          {/* Proposal kolaborasi (pengganti aktivitas terbaru) */}
-          <motion.section className="dash-activity" aria-label="Proposal kolaborasi" {...masuk(4)}>
+          {/* Pengelolaan pengajuan pindah ke modul tersendiri agar dashboard tetap
+              ringkas: kartu di bawah hanya menautkan ke arsipnya. */}
+          <motion.section className="dash-activity" aria-label="Laporan kolaborasi" {...masuk(4)}>
             <div className="dash-activity-head">
               <h2>
-                Proposal kolaborasi
+                Laporan kolaborasi
                 {belumDibaca > 0 ? <span className="dash-proposal-badge">{belumDibaca} baru</span> : null}
               </h2>
-              <span className="dash-panel-sub">dari form halaman kontak</span>
+              <span className="dash-panel-sub">arsip pengajuan · cetak PDF</span>
             </div>
-            {proposals === null ? (
-              <p className="dash-log-empty">Memuat proposal…</p>
-            ) : proposals.length === 0 ? (
-              <p className="dash-log-empty">
-                Belum ada proposal masuk. Pengajuan dari halaman kontak akan muncul di sini —
-                tanpa perlu membuka Gmail.
+            <p className="dash-log-empty">
+              {proposals === null
+                ? "Memuat pengajuan…"
+                : proposals.length === 0
+                  ? "Belum ada pengajuan kolaborasi. Kiriman dari halaman kontak akan muncul di modul Laporan Kolaborasi."
+                  : proposals.length === totalProposals
+                    ? `${proposals.length} pengajuan tersimpan dari form halaman kontak. Ubah status tindak lanjut, isi catatan internal, dan cetak laporannya jadi PDF di modul khusus.`
+                    : `${proposals.length} pengajuan terbaru dari total ${totalProposals} tersimpan. Arsip lengkap, ubah status, dan cetak PDF ada di modul khusus.`}
+            </p>
+            <div className="dash-reset-row">
+              <Link href="/admin/kolaborasi" className="dash-reset-btn">
+                Buka laporan kolaborasi
+              </Link>
+            </div>
+          </motion.section>
+
+          {/* Data mentah: penjelasan aturan hitung + tombol atur ulang. */}
+          <motion.section className="dash-activity" aria-label="Data mentah analitik" {...masuk(5)}>
+            <div className="dash-activity-head">
+              <h2>Aturan hitung kunjungan</h2>
+              <span className="dash-panel-sub">
+                {totalViews > views.length
+                  ? `${views.length} dari ${totalViews} catatan halaman · 7 hari`
+                  : `${views.length} catatan halaman · 7 hari`}
+              </span>
+            </div>
+            <p className="dash-log-empty">
+              Satu perangkat dihitung sekali sebagai pengunjung, berapa pun halaman yang dibukanya
+              (rata-rata {halamanPerPerangkat} halaman per perangkat). Identitas perangkat dibuat
+              acak di browser pengunjung — bukan alamat IP.
+            </p>
+            {resetInfo ? (
+              <p className="dash-reset-note" role="status">
+                {resetInfo}
               </p>
-            ) : (
-              <ul className="dash-log">
-                {proposals.map((p) => (
-                  <li key={p.$id} className="dash-log-row" data-unread={!p.sudah_dibaca || undefined}>
-                    <span className="dash-log-dot" aria-hidden="true" />
-                    <div className="dash-log-main">
-                      <p className="dash-log-action">
-                        {p.jenis}
-                        <span className="dash-log-entity">{p.nama}</span>
-                      </p>
-                      <p className="dash-proposal-msg">{p.pesan}</p>
-                      <p className="dash-log-actor">
-                        <a href={`mailto:${p.email}`}>{p.email}</a>
-                      </p>
-                    </div>
-                    <div className="dash-log-side">
-                      <time className="dash-log-time" dateTime={p.$createdAt}>
-                        {new Date(p.$createdAt).toLocaleString("id-ID", {
-                          day: "2-digit",
-                          month: "short",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </time>
-                      {!p.sudah_dibaca ? (
-                        <button
-                          type="button"
-                          className="dash-proposal-readbtn"
-                          onClick={() => handleTandaiDibaca(p.$id)}
-                        >
-                          Tandai dibaca
-                        </button>
-                      ) : null}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
+            ) : null}
+            {resetGagal ? (
+              <p className="dash-reset-note" role="alert" data-gagal="true">
+                Gagal menghapus catatan lama — periksa permission write(team:admin) pada koleksi
+                page_views.
+              </p>
+            ) : null}
+            <div className="dash-reset-row">
+              <button
+                type="button"
+                className="dash-reset-btn"
+                onClick={handleResetKunjungan}
+                disabled={mereset}
+              >
+                {mereset ? `Menghapus… ${jumlahDihapus ?? 0}` : "Atur ulang data kunjungan"}
+              </button>
+              <p className="dash-reset-hint">
+                Menghapus seluruh catatan kunjungan lama. Proposal kolaborasi tidak tersentuh.
+              </p>
+            </div>
           </motion.section>
         </>
       )}

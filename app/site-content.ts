@@ -246,6 +246,16 @@ export const siteImageSlots = {
   },
 } as const;
 
+// Handle kanal sosial resmi. Nilai kosong = ikonnya tidak dirender di halaman
+// publik, jadi tidak pernah ada tautan mati. Nilai di bawah ini adalah handle
+// bawaan sekaligus fallback statis bila Appwrite tidak dikonfigurasi; admin
+// boleh menimpanya lewat panel Pengaturan (koleksi site_settings), termasuk
+// mengosongkannya bila ikon ingin disembunyikan.
+// Instagram resmi: dikonfirmasi pemilik 2026-09-20.
+export const socialHandles: Record<"instagram", string> = {
+  instagram: "hmti.ubsi_margonda",
+};
+
 // Data struktur organisasi — SUMBER: "PENGURUS HMTI.zip" (data resmi pengurus,
 // 14 orang). Jangan menambah/mengubah nama tanpa data resmi baru. Foto tiap
 // anggota dipetakan otomatis dari lib/struktur-pengurus.ts (nama → file).
