@@ -1,0 +1,11 @@
+{
+  "name": "kirim-email-kolaborasi",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/main.js",
+  "description": "Notifikasi pengajuan kolaborasi untuk pengurus dan konfirmasi opsional untuk pengaju.",
+  "engines": {
+    "node": ">=20"
+  }
+}

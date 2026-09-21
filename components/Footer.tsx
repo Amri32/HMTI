@@ -1,17 +1,21 @@
 import Image from "next/image";
 import Link from "next/link";
+import SocialLinks from "@/components/SocialLinks";
 import { navigationItems, siteProfile } from "@/app/site-content";
 
 export default function Footer() {
+  // Tanpa margin-top: border kuning 4px sudah jadi pemisah, dan margin
+  // transparan hanya menghasilkan pita krem saat section di atasnya navy
+  // (mis. /kontak).
   return (
-    <footer className="mt-10 border-t-4 border-signal bg-ink text-white sm:mt-16">
+    <footer className="border-t-4 border-signal bg-ink text-white">
       <div className="mx-auto w-full max-w-[1280px] px-5 sm:px-8 lg:px-12">
-        <p className="border-b border-white/20 py-6 text-center font-serif text-base italic leading-7 text-white/85 sm:text-lg">
+        <p className="border-b border-white/20 py-5 text-center font-serif text-base italic leading-7 text-white/85 sm:text-lg">
           Wadah aspirasi, pelayanan, dan pengembangan kemampuan mahasiswa Teknologi Informasi.
         </p>
       </div>
-      <div className="mx-auto w-full max-w-[1280px] px-5 py-10 sm:px-8 sm:py-14 lg:px-12">
-        <div className="grid gap-10 lg:grid-cols-12">
+      <div className="mx-auto w-full max-w-[1280px] px-5 py-8 sm:px-8 sm:py-10 lg:px-12">
+        <div className="grid gap-8 lg:grid-cols-12">
           <div className="lg:col-span-5">
             <div className="flex items-center gap-3">
               <Image
@@ -26,13 +30,14 @@ export default function Footer() {
                 <p className="text-sm text-steel-light">{siteProfile.university}</p>
               </div>
             </div>
-            <p className="mt-6 max-w-md text-sm leading-6 text-white/80">
-              Wadah aspirasi, pelayanan, dan pengembangan kemampuan mahasiswa Teknologi Informasi.
-            </p>
+            <SocialLinks className="mt-5" />
           </div>
 
           <div className="lg:col-span-7 lg:pl-10">
-            <nav aria-label="Navigasi kaki halaman" className="flex flex-wrap gap-x-6 gap-y-2">
+            <nav
+              aria-label="Navigasi kaki halaman"
+              className="-mx-1 grid grid-cols-2 gap-x-8 gap-y-1 sm:grid-cols-4"
+            >
               {navigationItems.map((item) => (
                 <Link
                   key={item.href}
@@ -43,13 +48,13 @@ export default function Footer() {
                 </Link>
               ))}
             </nav>
-            <address className="mt-6 max-w-2xl border-t border-white/20 pt-6 text-sm not-italic leading-6 text-white/80">
+            <address className="mt-5 max-w-2xl border-t border-white/20 pt-5 text-sm not-italic leading-6 text-white/80">
               {siteProfile.address}
             </address>
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col gap-3 border-t border-white/20 pt-6 text-xs text-white/65 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-8 flex flex-col gap-3 border-t border-white/20 pt-5 text-xs text-white/65 sm:flex-row sm:items-center sm:justify-between">
           <p>{siteProfile.fullName}</p>
           <Link
             href="/kontak"

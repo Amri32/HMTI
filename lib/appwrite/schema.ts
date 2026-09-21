@@ -11,6 +11,8 @@ export const COLL_VISI_MISI = "visi_misi";
 export const COLL_STRUKTUR_DIVISI = "struktur_divisi";
 export const COLL_STRUKTUR_MEMBERS = "struktur_members";
 export const COLL_SITE_IMAGES = "site_images";
+// Pengaturan situs berbentuk pasangan kunci-nilai (mis. key "instagram").
+export const COLL_SITE_SETTINGS = "site_settings";
 export const COLL_MEDIA_LIBRARY = "media_library";
 export const COLL_AUDIT_LOG = "audit_log";
 export const COLL_PAGE_VIEWS = "page_views";

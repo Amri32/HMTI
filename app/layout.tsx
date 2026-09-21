@@ -7,12 +7,16 @@ const newsreader = Newsreader({
   variable: "--font-newsreader",
   subsets: ["latin"],
   style: ["normal", "italic"],
+  // display: optional mencegah re-wrap saat webfont datang (CLS font-swap):
+  // bila font tidak siap <100ms, fallback serif/sans-tax dipakai di kunjungan itu.
+  display: "optional",
 });
 
 const instrumentSans = Instrument_Sans({
   variable: "--font-instrument-sans",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+  display: "optional",
 });
 
 export const metadata: Metadata = {

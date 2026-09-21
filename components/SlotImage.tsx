@@ -109,11 +109,16 @@ export function SlotImageImg({
   sizes,
   priority = false,
   altFallback,
+  onImageLoad,
 }: {
   image: SiteImage & { sedangMemutuskan: boolean };
   sizes: string;
   priority?: boolean;
   altFallback: string;
+  // Dipakai pemakai yang butuh dimensi asli foto (mis. bidang yang mengikuti
+  // rasio foto itu sendiri, bukan rasio tetap milik section). Dipanggil sekali
+  // saat foto benar-benar termuat, dengan elemen <img> hasil render.
+  onImageLoad?: (el: HTMLImageElement) => void;
 }) {
   const [termuat, setTermuat] = useState(false);
   return (
@@ -124,7 +129,10 @@ export function SlotImageImg({
       sizes={sizes}
       priority={priority || undefined}
       className={termuat ? "slot-img-loaded" : undefined}
-      onLoad={() => setTermuat(true)}
+      onLoad={(event) => {
+        setTermuat(true);
+        onImageLoad?.(event.currentTarget);
+      }}
       onError={() => setTermuat(true)}
     />
   );

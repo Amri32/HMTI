@@ -3,8 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import { getContentRepository, type BeritaItem } from "@/lib/content-repo";
 import { getBeritaHref } from "@/lib/content-path";
+import { SelectionIndicator } from "@/components/motion/EditorialMotion";
 
 const filters = ["Semua terbitan", "Kegiatan", "Opini & Teknologi", "Riset & Akademik", "Warta Himpunan"] as const;
 
@@ -12,7 +14,9 @@ export default function NewsCatalog() {
   const [stories, setStories] = useState<BeritaItem[] | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [activeFilter, setActiveFilter] = useState<(typeof filters)[number]>("Semua terbitan");
+  const [filterRevision, setFilterRevision] = useState(0);
   const [query, setQuery] = useState("");
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     let aktif = true;
@@ -44,6 +48,12 @@ export default function NewsCatalog() {
       return matchesFilter && matchesQuery;
     });
   }, [stories, activeFilter, query]);
+
+  function selectFilter(filter: (typeof filters)[number]) {
+    if (filter === activeFilter) return;
+    setActiveFilter(filter);
+    setFilterRevision((revision) => revision + 1);
+  }
 
   return (
     <section className="news-catalog" aria-labelledby="news-catalog-title">
@@ -81,24 +91,31 @@ export default function NewsCatalog() {
                 className="news-filter"
                 data-active={activeFilter === filter}
                 aria-pressed={activeFilter === filter}
-                onClick={() => setActiveFilter(filter)}
+                onClick={() => selectFilter(filter)}
               >
-                {filter}
+                {activeFilter === filter ? <SelectionIndicator layoutId="news-active-filter" /> : null}
+                <span className="news-filter-label">{filter}</span>
               </button>
             ))}
           </div>
         </div>
 
         {stories === null ? (
-          <p className="news-empty-filter">Memuat katalog terbitan…</p>
+          <p className="news-empty-filter news-loading-catalog">Memuat katalog terbitan…</p>
         ) : loadError ? (
           <p role="alert" className="news-empty-filter">
             Katalog belum dapat dimuat. Periksa koneksi lalu muat ulang halaman.
           </p>
         ) : visibleStories.length > 0 ? (
-          <div className="news-card-grid">
-            {visibleStories.map((story) => (
-              <article className="news-card" key={story.id}>
+          <motion.div
+            key={filterRevision}
+            className="news-card-grid"
+            initial={filterRevision === 0 || reduceMotion ? false : { opacity: 0.92, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {visibleStories.map((story, index) => (
+              <article className={`news-card ${index === 0 ? "news-card--featured" : ""}`} key={story.id}>
                 <div className="news-card-image">
                   {story.image ? (
                     <Image src={story.image} alt={story.imageAlt} fill sizes="(min-width: 1100px) 31vw, (min-width: 680px) 48vw, 100vw" />
@@ -117,11 +134,20 @@ export default function NewsCatalog() {
                 </div>
               </article>
             ))}
-          </div>
+          </motion.div>
         ) : (
           <div className="news-empty-filter">
             <p>Tidak ada terbitan yang cocok dengan pencarian ini.</p>
-            <button type="button" onClick={() => { setQuery(""); setActiveFilter("Semua terbitan"); }}>
+            <button
+              type="button"
+              onClick={() => {
+                setQuery("");
+                if (activeFilter !== "Semua terbitan") {
+                  setActiveFilter("Semua terbitan");
+                  setFilterRevision((revision) => revision + 1);
+                }
+              }}
+            >
               Reset pencarian
             </button>
           </div>

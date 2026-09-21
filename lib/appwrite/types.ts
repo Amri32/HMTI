@@ -90,6 +90,13 @@ export type SiteImageDoc = Models.Document & {
   caption: string | null;
 };
 
+// Pengaturan situs publik (koleksi site_settings) — satu dokumen per kunci,
+// mis. { key: "instagram", value: "hmti.ubsi.margonda" }.
+export type SiteSettingDoc = Models.Document & {
+  key: string;
+  value: string;
+};
+
 export type MediaDoc = Models.Document & {
   file_path: string;
   file_name: string;
@@ -117,6 +124,9 @@ export type PageViewDoc = Models.Document & {
   screen_w: number | null;
   screen_h: number | null;
   session_id: string | null;
+  // Identitas perangkat (localStorage, permanen). Dasar hitungan "berapa
+  // device berbeda" di dashboard. Catatan lama bisa kosong.
+  visitor_id: string | null;
 };
 
 export type CollabSignalDoc = Models.Document & {
@@ -125,12 +135,17 @@ export type CollabSignalDoc = Models.Document & {
   detail: string | null;
 };
 
-// Proposal kolaborasi yang disimpan dari form /kontak. `sudah_dibaca` dipakai
-// dashboard admin untuk menandai proposal yang sudah ditindaklanjuti.
+// Proposal kolaborasi yang disimpan dari form /kontak.
+// `status` adalah sumber kebenaran status tindak lanjut (baru → dibaca →
+// ditindaklanjuti) yang tampil di laporan pengaju. `sudah_dibaca` dipertahankan
+// untuk dokumen lama dan selalu ditulis sejalan dengan status.
+// `catatan` = catatan internal pengurus; TIDAK pernah dikirim ke pengaju.
 export type CollabMessageDoc = Models.Document & {
   nama: string;
   email: string;
   jenis: string;
   pesan: string;
   sudah_dibaca: boolean;
+  status: "baru" | "dibaca" | "ditindaklanjuti" | null;
+  catatan: string | null;
 };

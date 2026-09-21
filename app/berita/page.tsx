@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import NewsCatalog from "@/components/NewsCatalog";
-import { BlurFade } from "@/components/motion/Reveal";
 
 export const metadata: Metadata = {
   title: "Berita | HMTI UBSI Margonda",
@@ -33,7 +32,7 @@ export default function NewsPage() {
         </div>
 
         <section className="news-hero" aria-labelledby="news-title">
-          <BlurFade className="news-hero-copy" y={18} blur={4}>
+          <div className="news-hero-copy">
             <h1 id="news-title">
               Warta terkini, <em>dialektika teknologi,</em> & rekam jejak pengabdian.
             </h1>
@@ -45,9 +44,9 @@ export default function NewsPage() {
                 Lihat katalog <ArrowIcon />
               </a>
             </div>
-          </BlurFade>
+          </div>
 
-          <BlurFade className="news-stat-board" y={24} blur={5} delay={0.08}>
+          <aside className="news-stat-board" aria-label="Rubrik terbitan HMTI">
             <div className="news-stat-board-top">
               <span>Rubrik terbitan</span>
             </div>
@@ -73,14 +72,12 @@ export default function NewsPage() {
               <span>Dikelola redaksi HMTI</span>
               <span>Kampus Margonda</span>
             </div>
-          </BlurFade>
+          </aside>
         </section>
 
       </div>
 
-      <BlurFade y={28} blur={5}>
-        <NewsCatalog />
-      </BlurFade>
+      <NewsCatalog />
 
     </div>
   );

@@ -44,25 +44,30 @@ export default function AdminEditBar() {
 
   const modul = PETA_MODUL.find((m) => m.cocok(pathname));
 
+  // Bar-nya fixed, jadi ia menempel di atas baris terakhir halaman. Spacer ini
+  // mengembalikan tinggi itu supaya footer tidak tertutup.
   return (
-    <aside className="admin-editbar" aria-label="Aksi admin untuk halaman ini">
-      <span className="admin-editbar-chip">
-        <span className="admin-editbar-dot" aria-hidden="true" />
-        Mode admin
-      </span>
-      {modul ? (
-        <Link href={modul.href} className="admin-editbar-link">
-          Kelola {modul.label}
+    <>
+      <aside className="admin-editbar" aria-label="Aksi admin untuk halaman ini">
+        <span className="admin-editbar-chip">
+          <span className="admin-editbar-dot" aria-hidden="true" />
+          Mode admin
+        </span>
+        {modul ? (
+          <Link href={modul.href} className="admin-editbar-link">
+            Kelola {modul.label}
+          </Link>
+        ) : null}
+        {HALAMAN_BERGAMBAR.has(pathname) ? (
+          <Link href="/admin/media" className="admin-editbar-link">
+            Ganti gambar
+          </Link>
+        ) : null}
+        <Link href="/admin" className="admin-editbar-link admin-editbar-link--ghost">
+          Dashboard
         </Link>
-      ) : null}
-      {HALAMAN_BERGAMBAR.has(pathname) ? (
-        <Link href="/admin/media" className="admin-editbar-link">
-          Ganti gambar
-        </Link>
-      ) : null}
-      <Link href="/admin" className="admin-editbar-link admin-editbar-link--ghost">
-        Dashboard
-      </Link>
-    </aside>
+      </aside>
+      <div className="admin-editbar-spacer" aria-hidden="true" />
+    </>
   );
 }

@@ -1,12 +1,17 @@
 "use client";
 
-import { useInView, useMotionValue, useSpring } from "motion/react";
+import {
+  useInView,
+  useMotionValue,
+  useReducedMotion,
+  useSpring,
+} from "motion/react";
 import { useCallback, useEffect, useRef } from "react";
 
 /*
  * Port of React Bits CountUp (public/r/CountUp-TS-TW.json).
  * Spring-driven number counter, fires once in view.
- * Source: https://github.com/DavidHDev/react-bits (MIT)
+ * Source: https://github.com/DavidHDev/react-bits (MIT + Commons Clause)
  */
 
 interface CountUpProps {
@@ -35,7 +40,10 @@ export default function CountUp({
   onEnd,
 }: CountUpProps) {
   const ref = useRef<HTMLSpanElement>(null);
-  const motionValue = useMotionValue(direction === "down" ? to : from);
+  const reducedMotion = useReducedMotion();
+  const startValue = direction === "down" ? to : from;
+  const endValue = direction === "down" ? from : to;
+  const motionValue = useMotionValue(startValue);
 
   const damping = 20 + 40 * (1 / duration);
   const stiffness = 100 * (1 / duration);
@@ -57,27 +65,48 @@ export default function CountUp({
   );
 
   useEffect(() => {
-    if (ref.current) {
-      ref.current.textContent = formatValue(direction === "down" ? to : from);
-    }
-  }, [from, to, direction, formatValue]);
+    if (!ref.current) return;
 
-  useEffect(() => {
-    if (isInView && startWhen) {
-      onStart?.();
-      const timeoutId = setTimeout(() => {
-        motionValue.set(direction === "down" ? from : to);
-      }, delay * 1000);
-      const endTimeoutId = setTimeout(
-        () => onEnd?.(),
-        delay * 1000 + duration * 1000,
-      );
-      return () => {
-        clearTimeout(timeoutId);
-        clearTimeout(endTimeoutId);
-      };
+    if (reducedMotion) {
+      motionValue.jump(endValue);
+      springValue.jump(endValue);
+      ref.current.textContent = formatValue(endValue);
+      return;
     }
-  }, [isInView, startWhen, motionValue, direction, from, to, delay, onStart, onEnd, duration]);
+
+    if (!isInView || !startWhen) return;
+
+    motionValue.jump(startValue);
+    springValue.jump(startValue);
+    ref.current.textContent = formatValue(startValue);
+    onStart?.();
+
+    const timeoutId = window.setTimeout(() => {
+      motionValue.set(endValue);
+    }, delay * 1000);
+    const endTimeoutId = window.setTimeout(
+      () => onEnd?.(),
+      delay * 1000 + duration * 1000,
+    );
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      window.clearTimeout(endTimeoutId);
+    };
+  }, [
+    delay,
+    duration,
+    endValue,
+    formatValue,
+    isInView,
+    motionValue,
+    onEnd,
+    onStart,
+    reducedMotion,
+    springValue,
+    startValue,
+    startWhen,
+  ]);
 
   useEffect(() => {
     const unsubscribe = springValue.on("change", (latest: number) => {
@@ -88,5 +117,11 @@ export default function CountUp({
     return () => unsubscribe();
   }, [springValue, formatValue]);
 
-  return <span className={className} ref={ref} />;
+  return (
+    <span className={className} aria-label={formatValue(to)}>
+      <span ref={ref} aria-hidden="true">
+        {formatValue(to)}
+      </span>
+    </span>
+  );
 }
